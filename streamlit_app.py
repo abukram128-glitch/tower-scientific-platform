@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from scipy.optimize import linprog
+from scipy.optimize 
+import linprog
 import sqlite3
 import urllib.parse
 from datetime import datetime
