@@ -1,376 +1,358 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import itertools
-from collections import Counter
+from scipy.optimize import linprog
+import plotly.express as px
+import plotly.graph_objects as go
 
 # ==========================================
-# 0. إعدادات واجهة التطبيق
+# 1. تهيئة الصفحة والأنماط (Page Configuration & CSS)
 # ==========================================
 st.set_page_config(
-    page_title="المُحاكي الوراثي المتكامل لحيوانات المزرعة وطيور الزينة",
+    page_title="المنصة الشاملة للهندسة الوراثية وتغذية الحيوان",
     page_icon="🧬",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-st.title("🧬 المنصة الشاملة للهندسة الوراثية، سجل الأنساب، وتتبع الأجيال")
-st.caption("نظام بحثي تطبيقي متكامل للسلالات العالمية والسودانية المحلية وطيور الزينة مع حسابات Inbreeding & Breeding Values")
-
-# ==========================================
-# 1. قاعدة البيانات الضخمة الممتدة
-# ==========================================
-BREEDS_DATABASE = {
-    "الأبقار (Cattle)": {
-        # السلالات السودانية
-        "الكنانة (Kenana - السودان)": {
-            "type": "حليب", "origin": "سوداني", "milk_yield": 2800, "fat_pct": 4.5, 
-            "growth_rate": 750, "heat_tolerance": "عالية جداً", "disease_res": "ممتازة",
-            "traits": "حليب وفير في البيئات المدارية، نسبة دهن جيدة، متحملة للقراد والحرارة."
-        },
-        "البتانة (Butana - السودان)": {
-            "type": "حليب", "origin": "سوداني", "milk_yield": 3100, "fat_pct": 4.6, 
-            "growth_rate": 780, "heat_tolerance": "عالية جداً", "disease_res": "ممتازة",
-            "traits": "أحد أفضل سلالات الحليب المدارية في أفريقيا، متأقلمة مع الجفاف."
-        },
-        "البقارة (Baggara - السودان)": {
-            "type": "لحم / جر", "origin": "سوداني", "milk_yield": 1200, "fat_pct": 4.0, 
-            "growth_rate": 850, "heat_tolerance": "عالية جداً", "disease_res": "عالية",
-            "traits": "سلالة لحم وقوة تحمل، ممتازة في رعي المسافات الطويلة بالغرب السوداني."
-        },
-        "العنواك / النيلية (Nilotic Cattle)": {
-            "type": "لحم / مناعة", "origin": "سوداني", "milk_yield": 900, "fat_pct": 3.8, 
-            "growth_rate": 650, "heat_tolerance": "عالية", "disease_res": "فائقة",
-            "traits": "قزمة/متوسطة، مقاومة عالية للحرارة المرتفعة ورطوبة المستنقعات وحشرات المياه."
-        },
-        # السلالات العالمية
-        "هولشتاين (Holstein-Friesian)": {
-            "type": "حليب", "origin": "عالمي (هولندا)", "milk_yield": 8500, "fat_pct": 3.7, 
-            "growth_rate": 1100, "heat_tolerance": "منخفضة", "disease_res": "متوسطة",
-            "traits": "الأعلى إنتاجاً للحليب عالمياً، تحتاج إدارة تغذية وبرودة عالية."
-        },
-        "براون سويس (Brown Swiss)": {
-            "type": "ثنائي الغرض", "origin": "عالمي (سويسرا)", "milk_yield": 6500, "fat_pct": 4.0, 
-            "growth_rate": 1150, "heat_tolerance": "متوسطة", "disease_res": "قوية",
-            "traits": "حليب ممتاز لصناعة الأجبان، جثة ممتازة وقوية البنية."
-        },
-        "بلاكبوس أنغوس (Black Angus)": {
-            "type": "لحم", "origin": "عالمي (إسكتلندا)", "milk_yield": 2200, "fat_pct": 3.9, 
-            "growth_rate": 1450, "heat_tolerance": "متوسطة", "disease_res": "جيدة",
-            "traits": "سلالة اللحم الأولى عالمياً، تصافٍ عالية وجودة مرملة للحم (Marbling)."
-        },
-        "سيمنتال (Simmental)": {
-            "type": "ثنائي الغرض", "origin": "عالمي (سويسرا)", "milk_yield": 5800, "fat_pct": 3.9, 
-            "growth_rate": 1380, "heat_tolerance": "متوسطة", "disease_res": "جيدة",
-            "traits": "معدلات نمو ممتازة مع إنتاج حليب غزير للأمهات."
-        }
-    },
-    
-    "الأغنام (Sheep)": {
-        # السلالات السودانية
-        "الحمري (Hamari Desert Sheep)": {
-            "type": "لحم / تصدير", "origin": "سوداني", "weaning_wt": 34, "adult_wt": 75, 
-            "litter_size": 1.15, "milk_yield": 140, "traits": "جسم ضخم، مرغوبة جداً في أسواق التصدير، أذن طويلة لينة."
-        },
-        "الأشقر / الخبشي (Ashgar)": {
-            "type": "لحم", "origin": "سوداني", "weaning_wt": 32, "adult_wt": 70, 
-            "litter_size": 1.10, "milk_yield": 130, "traits": "لون أحمر/أشقر مميز، نسبة تصافٍ عالية ولحم ممتاز."
-        },
-        "الكباشي (Kababish Desert)": {
-            "type": "لحم / رعي", "origin": "سوداني", "weaning_wt": 33, "adult_wt": 72, 
-            "litter_size": 1.10, "milk_yield": 120, "traits": "أرجل طويلة، قدرة فائقة على قطع مسافات صحراوية شاسعة."
-        },
-        "الدُّبّاسي (Dubasi)": {
-            "type": "لحم / حليب", "origin": "سوداني", "weaning_wt": 31, "adult_wt": 68, 
-            "litter_size": 1.25, "milk_yield": 160, "traits": "لون أبيض بقع سوداء حول العينين والأرجل، درّارة للحليب."
-        },
-        "النيلي (Nilotic Sheep)": {
-            "type": "لحم / مناعة", "origin": "سوداني", "weaning_wt": 18, "adult_wt": 35, 
-            "litter_size": 1.35, "milk_yield": 60, "traits": "قصيرة القامة، مقاومة لأمراض الرطوبة والديدان الكبدية."
-        },
-        # السلالات العالمية
-        "عسافي (Assaf)": {
-            "type": "حليب / لحم", "origin": "عالمي", "weaning_wt": 33, "adult_wt": 85, 
-            "litter_size": 1.65, "milk_yield": 380, "traits": "هجين العواسي والشرق فريزيان، إنتاج حليب قياسي."
-        },
-        "دوربر (Dorper)": {
-            "type": "لحم قياسي", "origin": "عالمي (جنوب أفريقيا)", "weaning_wt": 36, "adult_wt": 95, 
-            "litter_size": 1.45, "milk_yield": 100, "traits": "تساقط صوف ذاتي، معدل نمو عالي وسرعة بلوغ."
-        },
-        "روماني / بورولا (Romanov)": {
-            "type": "خصوبة عالية", "origin": "عالمي (روسيا)", "weaning_wt": 22, "adult_wt": 55, 
-            "litter_size": 2.80, "milk_yield": 110, "traits": "أعلى معدل خصوبة وتوأمية في العالم (تلد حتى 3-4 توائم)."
-        }
-    },
-    
-    "الماعز (Goats)": {
-        # السلالات السودانية
-        "النيوبي (Nubian Goat - السودان)": {
-            "type": "حليب / تحسين", "origin": "سوداني", "milk_yield": 280, "fat_pct": 5.0, 
-            "weaning_wt": 24, "litter_size": 1.80, "traits": "أصل الماعز النوبي العالمي، أذن طويلة ومظاهر أنثوية ممتازة."
-        },
-        "الصحراوي السوداني": {
-            "type": "لحم / رعي", "origin": "سوداني", "milk_yield": 150, "fat_pct": 4.2, 
-            "weaning_wt": 22, "litter_size": 1.30, "traits": "تحمل الجفاف وقلة الموارد المائية، قامة متوسطة."
-        },
-        "الماعز التاغري / الجبلي": {
-            "type": "لحم", "origin": "سوداني", "milk_yield": 110, "fat_pct": 4.0, 
-            "weaning_wt": 20, "litter_size": 1.40, "traits": "ممتلئة الجسم، متكيفة مع المناطق الجبلية والوعرة."
-        },
-        # السلالات العالمية
-        "السانين (Saanen)": {
-            "type": "حليب قياسي", "origin": "عالمي (سويسرا)", "milk_yield": 850, "fat_pct": 3.5, 
-            "weaning_wt": 26, "litter_size": 1.95, "traits": "سيدة إنتاج الحليب في الماعز، لون أبيض ناصع."
-        },
-        "البور (Boer)": {
-            "type": "لحم قياسي", "origin": "عالمي (جنوب أفريقيا)", "milk_yield": 120, "fat_pct": 4.0, 
-            "weaning_wt": 35, "litter_size": 1.75, "traits": "أضخم سلالات الماعز في إنتاج اللحم والجثة."
-        },
-        "الألبين (Alpine)": {
-            "type": "حليب", "origin": "عالمي (فرنسا)", "milk_yield": 750, "fat_pct": 3.6, 
-            "weaning_wt": 25, "litter_size": 1.85, "traits": "تأقلم عالي مع البيئات المختلفة وإنتاج حليب غزير."
-        }
-    },
-
-    "طيور الزينة والدواجن (Birds & Poultry)": {
-        # طيور الزينة
-        "طائر البادجي (Budgerigar)": {
-            "category": "زينة", "origin": "أستراليا", "clutch_size": 6, "egg_wt": 2, 
-            "body_wt": 0.04, "traits": "طفرات ألوان متعددة (أزرق، أخضر، لوتينو، أوبالين)."
-        },
-        "الكوكاتيل (Cockatiel)": {
-            "category": "زينة", "origin": "أستراليا", "clutch_size": 5, "egg_wt": 5, 
-            "body_wt": 0.09, "traits": "عرف مرتفع، خدود برتقالية، طفرات لوتينو والوايتبايس."
-        },
-        "دجاج السيراما (Serama)": {
-            "category": "زينة قياسي", "origin": "ماليزيا", "clutch_size": 8, "egg_wt": 20, 
-            "body_wt": 0.40, "traits": "أصغر دجاج زينة في العالم، صدر بارز وقامة رأسية."
-        },
-        "دجاج الحريري (Silkie)": {
-            "category": "زينة", "origin": "الصين", "clutch_size": 10, "egg_wt": 35, 
-            "body_wt": 1.10, "traits": "ريش يشبه الحرير، جلد وعظام سوداء، 5 أصابع بالأقدام."
-        },
-        "دجاج السبرات (Sebright)": {
-            "category": "زينة", "origin": "بريطانيا", "clutch_size": 8, "egg_wt": 30, 
-            "body_wt": 0.60, "traits": "ريش محدد ومحاط بحواف سوداء دقيقة للغاية."
-        },
-        # الدواجن القياسية والسودانية
-        "الدجاج البلدي السوداني": {
-            "category": "إنتاج / مناعة", "origin": "سوداني", "clutch_size": 130, "egg_wt": 42, 
-            "body_wt": 1.35, "traits": "مقاومة فائقة لنيوكاسل والحرارة، وضع بيض في ظروف قاسية."
-        },
-        "الفيومي (Fayoumi)": {
-            "category": "إنتاج / مناعة", "origin": "مصر", "clutch_size": 190, "egg_wt": 46, 
-            "body_wt": 1.50, "traits": "نضج جنسي مبكر، مقاومة عالية للديدان والأمراض الفيروسية."
-        },
-        "اللجهورن (Leghorn)": {
-            "category": "إنتاج بيض", "origin": "إيطاليا", "clutch_size": 280, "egg_wt": 62, 
-            "body_wt": 1.80, "traits": "قياسي عالمي في تحويل العلف إلى بيض."
-        }
+# إضافة CSS مخصص لتحسين الواجهة العربية
+st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+    html, body, [class*="css"]  {
+        font-family: 'Cairo', sans-serif;
+        direction: rtl;
+        text-align: right;
     }
-}
+    .stMetric {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .custom-card {
+        background-color: #ffffff;
+        border-radius: 8px;
+        padding: 20px;
+        border-right: 5px solid #2563eb;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        margin-bottom: 15px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 
 # ==========================================
-# 2. محرك مربعات بانيت والوراثة المندلية
+# 2. قواعد البيانات المدمجة (Embedded Data Engine)
 # ==========================================
-def generate_gametes(genotype):
-    if len(genotype) == 1:
-        genotype = genotype + genotype
-    pairs = [genotype[i:i+2] for i in range(0, len(genotype), 2)]
-    gamete_alleles = [list(pair) for pair in pairs]
-    return [''.join(g) for g in itertools.product(*gamete_alleles)]
+class DatabaseEngine:
+    @staticmethod
+    def get_livestock_breeds():
+        return {
+            "الأبقار": {
+                "الكنانة (سوداني)": {"milk": 1200, "heat_tol": 95, "meat": 60, "origin": "محلية"},
+                "البتانة (سوداني)": {"milk": 1500, "heat_tol": 90, "meat": 65, "origin": "محلية"},
+                "البقارة (سوداني)": {"milk": 600, "heat_tol": 98, "meat": 75, "origin": "محلية"},
+                "هولشتاين (Holstein)": {"milk": 8000, "heat_tol": 40, "meat": 50, "origin": "عالمية"},
+                "بلاكبوس أنغوس (Angus)": {"milk": 800, "heat_tol": 55, "meat": 95, "origin": "عالمية"}
+            },
+            "الأغنام والماعز": {
+                "الحمري (سوداني)": {"milk": 200, "heat_tol": 95, "growth": 85, "origin": "محلية"},
+                "الكباشي (سوداني)": {"milk": 150, "heat_tol": 98, "growth": 90, "origin": "محلية"},
+                "الدباسي (سوداني)": {"milk": 180, "heat_tol": 92, "growth": 88, "origin": "محلية"},
+                "الماعز النوبي": {"milk": 600, "heat_tol": 90, "growth": 60, "origin": "محلية"},
+                "ماعز البور (Boer)": {"milk": 300, "heat_tol": 70, "growth": 98, "origin": "عالمية"},
+                "غنم العساف (Assaf)": {"milk": 1200, "heat_tol": 65, "growth": 75, "origin": "عالمية"}
+            },
+            "طيور الزينة والدواجن": {
+                "الدجاج البلدي السوداني": {"egg": 120, "heat_tol": 98, "weight": 1.3, "fcr": 4.5},
+                "الفيومي": {"egg": 200, "heat_tol": 90, "weight": 1.5, "fcr": 3.8},
+                "اللجهورن (Leghorn)": {"egg": 300, "heat_tol": 60, "weight": 1.8, "fcr": 2.1},
+                "دجاج السيراما (Serama)": {"egg": 80, "heat_tol": 80, "weight": 0.5, "fcr": 5.0},
+                "البادجي (زينة)": {"egg": 0, "heat_tol": 85, "weight": 0.04, "fcr": 0},
+                "الكوكاتيل (زينة)": {"egg": 0, "heat_tol": 80, "weight": 0.09, "fcr": 0}
+            }
+        }
 
-def run_punnett_square(sire_geno, dam_geno):
-    sire_gametes = generate_gametes(sire_geno)
-    dam_gametes = generate_gametes(dam_geno)
-    
-    matrix = []
-    all_offspring = []
-    for d in dam_gametes:
-        row = []
-        for s in sire_gametes:
-            offspring_geno = ""
-            for i in range(min(len(d), len(s))):
-                gene_pair = sorted([s[i], d[i]], key=lambda x: (x.lower(), not x.isupper()))
-                offspring_geno += "".join(gene_pair)
-            row.append(str(offspring_geno))
-            all_offspring.append(str(offspring_geno))
-        matrix.append(row)
+    @staticmethod
+    def get_feed_ingredients():
+        return pd.DataFrame([
+            {"المادة الخام": "ذرة رفيعة (فتريتة)", "CP": 9.0, "ME_Kcal": 3200, "CF": 2.5, "EE": 3.5, "Cost_Kg": 1.20, "Max_Include": 65.0},
+            {"المادة الخام": "عسبار عباد الشمس (Sunflower Cake)", "CP": 28.0, "ME_Kcal": 2200, "CF": 22.0, "EE": 6.0, "Cost_Kg": 1.75, "Max_Include": 25.0},
+            {"المادة الخام": "أمباز السوداني (Groundnut Cake)", "CP": 45.0, "ME_Kcal": 2500, "CF": 6.5, "EE": 7.0, "Cost_Kg": 2.60, "Max_Include": 20.0},
+            {"المادة الخام": "مركز مستورد (Concentrate 5%)", "CP": 40.0, "ME_Kcal": 2100, "CF": 3.0, "EE": 2.0, "Cost_Kg": 5.80, "Max_Include": 5.0},
+            {"المادة الخام": "نخالة القمح (ردة)", "CP": 15.0, "ME_Kcal": 1300, "CF": 11.0, "EE": 4.0, "Cost_Kg": 0.95, "Max_Include": 25.0},
+            {"المادة الخام": "حجر جيري (Limestone)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Cost_Kg": 0.20, "Max_Include": 2.0},
+            {"المادة الخام": "مخلوط فيتامينات ومعادن (Premix)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Cost_Kg": 8.00, "Max_Include": 0.5}
+        ])
+
+
+# ==========================================
+# 3. محرك الوراثة والأنساب (Genetics Engine)
+# ==========================================
+class GeneticSimulator:
+    def __init__(self, sire_data, dam_data, mating_system):
+        self.sire = sire_data
+        self.dam = dam_data
+        self.system = mating_system
+
+    def calculate_blood_fractions(self):
+        if "F1" in self.system:
+            return 50.0, 50.0
+        elif "Backcross to Sire" in self.system:
+            return 75.0, 25.0
+        elif "Backcross to Dam" in self.system:
+            return 25.0, 75.0
+        elif "F2" in self.system:
+            return 50.0, 50.0
+        return 50.0, 50.0
+
+    def estimate_performance(self):
+        s_frac, d_frac = [f / 100.0 for f in self.calculate_blood_fractions()]
         
-    df_punnett = pd.DataFrame(
-        matrix, 
-        index=[f"مشيج الأنثى: {g}" for g in dam_gametes], 
-        columns=[f"مشيج الذكر: {g}" for g in sire_gametes]
-    ).astype(str)
-    
-    counts = Counter(all_offspring)
-    total = len(all_offspring)
-    ratios = [{"التركيب الوراثي (Genotype)": k, "العدد": v, "النسبة المئوية": f"{(v/total)*100:.1f}%"} for k, v in counts.items()]
-    
-    return df_punnett, pd.DataFrame(ratios)
+        # قوة الهجين (Heterosis) تكون في أوجها في F1
+        heterosis_factor = 1.12 if "F1" in self.system else (1.05 if "F2" in self.system else 1.02)
+        
+        predicted_metrics = {}
+        for key in self.sire.keys():
+            if isinstance(self.sire[key], (int, float)) and key in self.dam:
+                base_val = (self.sire[key] * s_frac) + (self.dam[key] * d_frac)
+                if key != "heat_tol":  # عدم تضخيم تحمل الحرارة بقوة الهجين
+                    predicted_metrics[key] = round(base_val * heterosis_factor, 2)
+                else:
+                    predicted_metrics[key] = round(base_val, 2)
+                    
+        return predicted_metrics
+
 
 # ==========================================
-# 3. القائمة الجانبية وتحديد المعطيات
+# 4. محرك التخطيط الخطي للتغذية (Optimization Engine)
 # ==========================================
-st.sidebar.header("⚙️ إعدادات النموذج والتخصيص")
+class FeedOptimizer:
+    def __init__(self, ingredients_df, target_cp, target_me):
+        self.df = ingredients_df
+        self.target_cp = target_cp
+        self.target_me = target_me
 
-selected_category = st.sidebar.selectbox("1. اختر التخصص الحيواني:", list(BREEDS_DATABASE.keys()))
+    def optimize(self):
+        costs = self.df["Cost_Kg"].values
+        cp = self.df["CP"].values
+        me = self.df["ME_Kcal"].values
+        max_bounds = self.df["Max_Include"].values / 100.0
 
-generation_target = st.sidebar.radio(
-    "2. الجيل المراد محاكاته وتربيته:",
-    [
-        "الجيل الأول (F1 Cross)", 
-        "الجيل الثاني (F2 Generation - F1 × F1)", 
-        "الجيل الثالث (F3 Generation)",
-        "الخلط الرجعي (Backcross - F1 × Sire/Dam)"
-    ]
-)
+        # قيد المجموع = 100% (1.0)
+        A_eq = [np.ones(len(costs))]
+        b_eq = [1.0]
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 🧬 خيارات التزاوج الداخلي")
-inbreeding_check = st.sidebar.checkbox("حساب معامل التزاوج الداخلي (Inbreeding Coefficient)", value=False)
-if inbreeding_check:
-    inbreeding_level = st.sidebar.slider("نسبة قرابة الآباء (Relationship Degree):", 0.0, 0.5, 0.125, step=0.0625, help="0.25 = أشقاء، 0.125 = غيران")
+        # قيود الحد الأدنى للبروتين والطاقة
+        A_ub = [
+            -cp,     # -CP <= -target_cp
+            -me      # -ME <= -target_me
+        ]
+        b_ub = [
+            -self.target_cp,
+            -self.target_me
+        ]
+
+        bounds = [(0, b) for b in max_bounds]
+
+        res = linprog(costs, A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
+        return res
+
 
 # ==========================================
-# 4. واجهة العرض واختيار السلالات
+# 5. واجهة المستخدم (Streamlit Application UI)
 # ==========================================
-breeds_dict = BREEDS_DATABASE[selected_category]
-st.header(f"📊 برنامج تحسين وتتبع أجيال: {selected_category}")
 
-c_sire, c_dam = st.columns(2)
-
-with c_sire:
-    st.subheader("♂️ خط الآباء / الذكور (Sire Line)")
-    sire_breed = st.selectbox("سلالة الذكر (Sire Breed):", list(breeds_dict.keys()), index=0)
-    sire_data = breeds_dict[sire_breed]
-    st.success(f"📌 **الأصل:** {sire_data['origin']} | **الصفات:** {sire_data['traits']}")
-    
-    # اختيار الجينات الوصفية للذكر
-    sire_geno = st.selectbox(
-        "الجينات الوصفية للذكر (القرون / العرف / اللون):", 
-        ["PP (سائد نقي - عديم القرون/عرف جوزي)", "Pp (خليط)", "pp (متنحي - بقرون/عرف مفرد)"], 
-        key="s_geno_main"
-    )
-
-with c_dam:
-    st.subheader("♀️ خط الأمهات / الإناث (Dam Line)")
-    dam_breed = st.selectbox("سلالة الأنثى (Dam Breed):", list(breeds_dict.keys()), index=1 if len(breeds_dict)>1 else 0)
-    dam_data = breeds_dict[dam_breed]
-    st.warning(f"📌 **الأصل:** {dam_data['origin']} | **الصفات:** {dam_data['traits']}")
-    
-    # اختيار الجينات الوصفية للأنثى
-    dam_geno = st.selectbox(
-        "الجينات الوصفية للأنثى:", 
-        ["pp (متنحي - بقرون/عرف مفرد)", "Pp (خليط)", "PP (سائد نقي - عديم القرون)"], 
-        key="d_geno_main"
-    )
-
+# العنوان الرئيسي
+st.markdown('<h1 style="color:#1e3a8a;">🧬 المنصة المتكاملة للإنتاج الحيواني والتغذية التطبيقية</h1>', unsafe_allow_html=True)
+st.caption("تطبيق علمي هجين لإدارة تحسين الأنساب وصياغة العلائق الاقتصادية | د. عبد القادر إسماعيل")
 st.markdown("---")
 
-# ==========================================
-# 5. محرك حسابات الهجين وتتبع الأجيال Mating Engine
-# ==========================================
-st.subheader(f"📈 نتائج ومؤشرات {generation_target}")
-
-# حساب معامل قوة الهجين Heterosis ومعامل التفكك Breakup
-if generation_target == "الجيل الأول (F1 Cross)":
-    heterosis_factor = 1.12 if sire_breed != dam_breed else 1.00
-    gen_desc = f"تزاوج مباشر (50% جينات {sire_breed} + 50% جينات {dam_breed}). أقصى قوة هجين متوقعة."
-    sire_g_input = sire_geno.split()[0]
-    dam_g_input = dam_geno.split()[0]
-    sire_blood_pct = 50.0
-
-elif generation_target == "الجيل الثاني (F2 Generation - F1 × F1)":
-    heterosis_factor = 1.05 if sire_breed != dam_breed else 1.00 # فقدان نصف قوة الهجين
-    gen_desc = f"تزاوج أفراد F1 داخلياً. انخفاض قوة الهجين بنسبة 50% وظهور الانعزالات الوراثية المندلية."
-    sire_g_input = "Pp"
-    dam_g_input = "Pp"
-    sire_blood_pct = 50.0
-
-elif generation_target == "الجيل الثالث (F3 Generation)":
-    heterosis_factor = 1.02 if sire_breed != dam_breed else 1.00
-    gen_desc = f"الجيل الثالث F3. استقرار الصفات وتثبيت السلالة المستحدثة (Composite Breed Creation)."
-    sire_g_input = "Pp"
-    dam_g_input = "Pp"
-    sire_blood_pct = 50.0
-
-else: # Backcross
-    heterosis_factor = 1.04
-    gen_desc = f"خلط رجعي (F1 × {sire_breed}). لاستعادة 75% من صفات سلالة الذكر الأصلي مع الاحتفاظ بمناعة الأم."
-    sire_g_input = sire_geno.split()[0]
-    dam_g_input = "Pp"
-    sire_blood_pct = 75.0
-
-# تأثير التزاوج الداخلي إذا تم تفعيله
-if inbreeding_check:
-    inbreeding_penalty = 1.0 - (inbreeding_level * 0.15) # خفض الأداء بسبب Inbreeding Depression
-    heterosis_factor *= inbreeding_penalty
-    st.error(f"⚠️ تم تطبيق خصم التزاوج الداخلي (Inbreeding Depression): خصم {inbreeding_level*15:.1f}% من الأداء الإنتاجي.")
-
-st.info(f"💡 **وصف التركيب الوراثي والتوزيع:** {gen_desc}")
-
-# العرض في تبويبات تفصيلية
-tab_punnett, tab_performance, tab_pedigree = st.tabs([
-    "🧬 مربع بانيت والانعزالات الجينية", 
-    "📊 المتوقع الإنتاجي والمؤشرات الكمية", 
-    "📜 خريطة النسل وسجل الأنساب (Pedigree)"
+# القائمة الجانبية
+st.sidebar.image("https://cdn-icons-png.flaticon.com/512/3043/3043884.png", width=100)
+st.sidebar.title("لوحة التحكم والوحدات")
+app_mode = st.sidebar.selectbox("اختر الوحدة البرمجية:", [
+    "🧬 1. محاكي الوراثة وتحسين الأنساب",
+    "🌾 2. تركيب العلائق بأقل تكلفة (Least-Cost)",
+    "📊 3. تحليل إحلال عسبار عباد الشمس (Sunflower SSC)",
+    "📚 4. السجلات والدليل الفني"
 ])
 
-with tab_punnett:
-    df_p, df_r = run_punnett_square(sire_g_input, dam_g_input)
-    col_a, col_b = st.columns([2, 1])
-    with col_a:
-        st.write(f"**جدول أمشاج مربع بانيت لـ ({generation_target}):**")
-        st.table(df_p)
-    with col_b:
-        st.write("**توزيع النسب والجينوتيب:**")
-        st.table(df_r)
+# ------------------------------------------
+# الوحدة الأولى: الوراثة والأنساب
+# ------------------------------------------
+if app_mode == "🧬 1. محاكي الوراثة وتحسين الأنساب":
+    st.header("🧬 وحدة التنبؤ الوراثي وتحسين الأنساب")
+    st.write("تقوم هذه الوحدة بحساب القيمة التربوية المتوقعة ومستوى الأداء والمناعة للهجن الناتجة.")
 
-with tab_performance:
-    if "الأبقار" in selected_category:
-        base_milk = (sire_data['milk_yield'] + dam_data['milk_yield']) / 2
-        exp_milk = base_milk * heterosis_factor
-        exp_growth = ((sire_data['growth_rate'] + dam_data['growth_rate']) / 2) * heterosis_factor
-        exp_fat = (sire_data['fat_pct'] + dam_data['fat_pct']) / 2
-        
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("إنتاج الحليب المتوقع للنسل", f"{exp_milk:.0f} كجم/موسم")
-        m2.metric("معدل النمو اليومي", f"{exp_growth:.0f} جم/يوم")
-        m3.metric("نسبة الدهن المتوقعة", f"{exp_fat:.2f}%")
-        m4.metric("نسبة دم السلالة الأولى (Sire)", f"{sire_blood_pct:.1f}%")
+    col_category, col_system = st.columns(2)
+    
+    breeds_db = DatabaseEngine.get_livestock_breeds()
+    
+    with col_category:
+        selected_species = st.selectbox("اختر القطاع الإنتاجي:", list(breeds_db.keys()))
+    
+    with col_system:
+        mating_sys = st.selectbox("نظام الخلط والتزاوج المستهدف:", [
+            "الجيل الأول (F1 Cross - 50%)",
+            "خلط رجعي للأب (Backcross to Sire - 75%)",
+            "خلط رجعي للأم (Backcross to Dam - 75%)",
+            "الجيل الثاني (F2 Generation)"
+        ])
 
-    elif "الأغنام" in selected_category or "الماعز" in selected_category:
-        exp_wean = ((sire_data['weaning_wt'] + dam_data['weaning_wt']) / 2) * heterosis_factor
-        exp_litter = ((sire_data['litter_size'] + dam_data['litter_size']) / 2) * (heterosis_factor if heterosis_factor > 1 else 1.0)
-        exp_milk = ((sire_data['milk_yield'] + dam_data['milk_yield']) / 2) * heterosis_factor
-        
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("وزن الفطام المتوقع", f"{exp_wean:.1f} كجم")
-        m2.metric("معدل التوأمية المتوقع", f"{exp_litter:.2f} مولود/بطن")
-        m3.metric("إنتاج الحليب المتوقع للأمهات", f"{exp_milk:.0f} كجم/موسم")
-        m4.metric("نسبة دم الذكر (Sire Blood)", f"{sire_blood_pct:.1f}%")
+    st.markdown("### 🧬 اختيار الآباء (Parents Selection)")
+    col_sire, col_dam = st.columns(2)
 
-    else: # طيور وزينة ودواجن
-        exp_egg = ((sire_data['clutch_size'] + dam_data['clutch_size']) / 2) * heterosis_factor
-        exp_body = (sire_data['body_wt'] + dam_data['body_wt']) / 2
-        exp_egg_wt = (sire_data['egg_wt'] + dam_data['egg_wt']) / 2
-        
-        m1, m2, m3 = st.columns(3)
-        m1.metric("إنتاج البيض / حجم العش المتوقع", f"{exp_egg:.0f}")
-        m2.metric("وزن الجسم المتوقع للناتج", f"{exp_body:.2f} كجم")
-        m3.metric("متوسط وزن البيضة", f"{exp_egg_wt:.1f} جم")
+    available_breeds = list(breeds_db[selected_species].keys())
 
-with tab_pedigree:
-    st.subheader("📜 سجل شجرة الأنساب المتوقعة (Pedigree Tree)")
-    st.code(f"""
-    [ الجيل الأبوي P1 ]
-    ├── الأب (Sire): {sire_breed} (100% {sire_data['origin']})
-    └── الأم (Dam): {dam_breed} (100% {dam_data['origin']})
-          │
-          ▼
-    [ الناتج: {generation_target} ]
-    ├── نسبة دم الأب: {sire_blood_pct}% {sire_breed}
-    ├── نسبة دم الأم: {100-sire_blood_pct}% {dam_breed}
-    └── الحالة الوراثية: {'هجين F1 ممتاز' if generation_target == 'الجيل الأول (F1 Cross)' else 'انعزالات وراثية وتثبيت خطوط'}
-    """, language="text")
+    with col_sire:
+        sire_name = st.selectbox("♂️ اختيار سلالة الذكر (Sire):", available_breeds, index=3 if len(available_breeds)>3 else 0)
+        sire_data = breeds_db[selected_species][sire_name]
+        st.json(sire_data, expanded=False)
+
+    with col_dam:
+        dam_name = st.selectbox("♀️ اختيار سلالة الأنثى (Dam):", available_breeds, index=0)
+        dam_data = breeds_db[selected_species][dam_name]
+        st.json(dam_data, expanded=False)
+
+    # تشغيل محاكي الوراثة
+    sim = GeneticSimulator(sire_data, dam_data, mating_sys)
+    s_frac, d_frac = sim.calculate_blood_fractions()
+    results = sim.estimate_performance()
+
+    st.markdown("---")
+    st.subheader("📊 نتائج التنبؤ الوراثي للجيل الناتج")
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("نسبة دم الذكر", f"{s_frac}%", sire_name)
+    m2.metric("نسبة دم الأنثى", f"{d_frac}%", dam_name)
+    m3.metric("مستوى تحمل البيئة والحرارة", f"{results.get('heat_tol', 'N/A')}%")
+    m4.metric("معامل قوة الهجين", "12%+" if "F1" in mating_sys else "5%+")
+
+    # رسم بياني لمقارنة الصفات
+    st.subheader("📈 مقارنة أداء الهجين مع الأبوين")
+    
+    categories = [k for k in results.keys() if isinstance(results[k], (int, float))]
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatterpolar(r=[sire_data.get(k, 0) for k in categories], theta=categories, fill='toself', name=f'الأب: {sire_name}'))
+    fig.add_trace(go.Scatterpolar(r=[dam_data.get(k, 0) for k in categories], theta=categories, fill='toself', name=f'الأم: {dam_name}'))
+    fig.add_trace(go.Scatterpolar(r=[results.get(k, 0) for k in categories], theta=categories, fill='toself', name='الجيل الناتج (Offspring)'))
+    
+    fig.update_layout(polar=dict(radialaxis=dict(visible=True)), showlegend=True)
+    st.plotly_chart(fig, use_container_width=True)
+
+# ------------------------------------------
+# الوحدة الثانية: تركيب العلائق بأقل تكلفة
+# ------------------------------------------
+elif app_mode == "🌾 2. تركيب العلائق بأقل تكلفة (Least-Cost)":
+    st.header("🌾 وحدة البرمجة الخطية لتصنيع العلائق الاقتصادية")
+    st.write("حساب التركيبة المثالية مع الالتزام التام بالاحتياجات الغذائية والحدود القصوى لإدخال المواد الخام.")
+
+    col_req1, col_req2 = st.columns(2)
+    with col_req1:
+        req_cp = st.number_input("الحد الأدنى للبروتين الخام المطلوبة (CP %):", 10.0, 30.0, 18.0, step=0.5)
+    with col_req2:
+        req_me = st.number_input("الحد الأدنى للطاقة الممثلة (ME Kcal/Kg):", 1500, 3500, 2800, step=50)
+
+    st.markdown("### 📋 جدول المواد الخام المتاحة والتحليل الكيميائي")
+    feed_data = DatabaseEngine.get_feed_ingredients()
+    
+    edited_feed_df = st.data_editor(feed_data, num_rows="dynamic", use_container_width=True)
+
+    if st.button("🚀 تشغيل الخوارزمية وحساب العليقة المثالية", type="primary"):
+        optimizer = FeedOptimizer(edited_feed_df, req_cp, req_me)
+        res = optimizer.optimize()
+
+        if res.success:
+            st.success("✅ تم العثور على التركيبة الأقل تكلفة التي تلبي كافة الشروط الفنية!")
+            
+            solution_df = edited_feed_df[["المادة الخام", "Cost_Kg", "CP", "ME_Kcal"]].copy()
+            solution_df["النسبة في العليقة (%)"] = np.round(res.x * 100, 2)
+            solution_df["الوزن لكل طن (كجم)"] = np.round(res.x * 1000, 1)
+            solution_df["التكلفة المباشرة (لكل طن)"] = np.round(res.x * 1000 * solution_df["Cost_Kg"], 2)
+
+            col_table, col_summary = st.columns([2, 1])
+            with col_table:
+                st.dataframe(solution_df, use_container_width=True)
+            
+            with col_summary:
+                total_cost_kg = res.fun
+                st.metric("التكلفة الإجمالية للكيلوجرام", f"${total_cost_kg:.3f}")
+                st.metric("التكلفة الإجمالية للطن", f"${total_cost_kg * 1000:.2f}")
+                
+                # رسم بياني لدائرة المكونات
+                fig_pie = px.pie(solution_df, values="النسبة في العليقة (%)", names="المادة الخام", title="توزيع المكونات في العليقة")
+                st.plotly_chart(fig_pie, use_container_width=True)
+        else:
+            st.error("❌ لم تنجح الخوارزمية في إيجاد حل ضمن هذه القيود. يرجى تخفيف قيود الطاقة أو رفع الحدود القصوى للمكونات.")
+
+# ------------------------------------------
+# الوحدة الثالثة: بحث إحلال عسبار عباد الشمس
+# ------------------------------------------
+elif app_mode == "📊 3. تحليل إحلال عسبار عباد الشمس (Sunflower SSC)":
+    st.header("📊 المحاكي التفاعلي لإحلال عسبار عباد الشمس المحلي (SSC)")
+    st.write("تقييم الأثر الاقتصادي والإنتاجي لاستبدال المركز المستورد والأنباز المحلي بعسبار زهرة الشمس.")
+
+    col_exp1, col_exp2 = st.columns(2)
+    with col_exp1:
+        ssc_replacement_rate = st.slider("نسبة الإحلال في العليقة (Sunflower Cake %):", 0, 30, 15, 1)
+        imported_conc_reduction = st.slider("نسبة تقليل المركز المستورد (%):", 0, 100, 50, 5)
+
+    with col_exp2:
+        flock_size = st.number_input("حجم القطيع / المزرعة (عدد الطيور أو الرؤوس):", 100, 100000, 5000)
+        daily_feed_per_head = st.number_input("معدل الاستهلاك اليومي (كجم/رأس أو طائر):", 0.05, 15.0, 0.110, step=0.01)
+
+    # حسابات الأثر الاقتصادي
+    daily_total_feed = flock_size * daily_feed_per_head  # كجم/يوم
+    monthly_feed_tons = (daily_total_feed * 30) / 1000  # طن/شهر
+    
+    # افتراض توفير 60 دولار في الطن عند استخدام 15% عسبار بدلاً من التركيزات المستوردة
+    saved_per_ton = ssc_replacement_rate * 3.8  
+    total_monthly_savings = monthly_feed_tons * saved_per_ton
+
+    st.markdown("---")
+    st.subheader("💡 نتائج المحاكاة المباشرة")
+
+    res_c1, res_c2, res_c3 = st.columns(3)
+    res_c1.metric("الاستهلاك الشهري للعلف", f"{monthly_feed_tons:.1f} طن")
+    res_c2.metric("التوفير التقديري لكل طن", f"${saved_per_ton:.2f}")
+    res_c3.metric("إجمالي التوفير الشهري", f"${total_monthly_savings:.2f}", delta="توفير عملة صعبة")
+
+    st.markdown("""
+    <div class="custom-card">
+    <h4>📝 التوصية الفنية والتطبيقية:</h4>
+    <ul>
+        <li>أثبتت النتائج الميدانية أن استخدام عسبار زهرة الشمس حتى مستوى <b>15%</b> في علائق الدواجن (البياض والتسمين) لا يؤثر سلباً على معامل التحويل الغذائي (FCR).</li>
+        <li>ينصح بإضافة الأنزيمات الهاضمة للألياف (مثل Xylanase) عند زيادة النسبة عن 15% للسيطرة على معامل الألياف الخام (CF).</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+# ------------------------------------------
+# الوحدة الرابعة: السجلات والدليل الفني
+# ------------------------------------------
+else:
+    st.header("📚 الدليل الفني والسجلات الميدانية")
+    st.write("مرجع سريع للقيم الغذائية القياسية ومواصفات السلالات المحلية.")
+
+    tab_ref1, tab_ref2 = st.tabs(["📋 الاحتياجات الغذائية القياسية", "🧬 الأطلس الميداني للسلالات"])
+
+    with tab_ref1:
+        st.subheader("جدول الاحتياجات الغذائية الدنيا حسب نوع الإنتاج")
+        st.table(pd.DataFrame({
+            "نوع القطاع": ["دجاج تسمين (بادئ)", "دجاج بياض (إنتاج ذروة)", "أبقار حليب (عالية الإنتاج)", "أغنام تسمين"],
+            "البروتين الخام (CP %)(الحد الأدنى)": ["22.0%", "17.5%", "16.5%", "14.0%"],
+            "الطاقة الممثلة (ME Kcal/kg)": ["3000", "2750", "2600", "2700"],
+            "الألياف القصوى (CF %)": ["3.5%", "5.0%", "16.0%", "12.0%"]
+        }))
+
+    with tab_ref2:
+        st.subheader("خصائص السلالات السودانية المحلية")
+        st.markdown("""
+        * **أبقار الكنانة والبتانة:** سلالات حليب محلية ممتازة، تمتاز بمقاومة عالية لقراد الأبقار والحرارة المرتفعة مع معدل إنتاج يصل إلى 15 لتر/يوم تحت الإدارة المحسنة.
+        * **الأغنام الحمرية والكباشية:** من أفضل سلالات اللحم في المنطقة، تمتاز بمعدلات نمو عالية وكفاءة ممتازة في تحويل العلائق الفقيرة.
+        * **دجاج الفيومي والبلدي:** يمتلك مناعة عالية جداً ضد الأمراض الفيروسية الشائعة مثل الماريك والنيوكاسل مقارنة بالسلالات التجارية.
+        """)
