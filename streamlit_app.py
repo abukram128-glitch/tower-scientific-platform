@@ -5,41 +5,58 @@ import itertools
 from collections import Counter
 
 # ==========================================
-# 0. إعدادات الصفحة والتنسيق العام
+# 0. إعدادات الصفحة
 # ==========================================
 st.set_page_config(
-    page_title="منصة الهندسة الوراثية والتحسين الوراثي لحيوانات المزرعة",
+    page_title="منصة التحسين الوراثي والخلط لحيوانات المزرعة",
     page_icon="🧬",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# نمط CSS مخصص لتحسين مظهر الجداول والمؤشرات
-st.markdown("""
-    <style>
-    .main { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    .stMetric { background-color: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; }
-    .punnett-table { text-align: center; font-weight: bold; }
-    .section-header { color: #1e3a8a; border-bottom: 2px solid #3b82f6; padding-bottom: 5px; margin-top: 20px; }
-    </style>
-""", unsafe_allow_html=True)
-
-st.title("🧬 المنصة المتقدمة للهندسة الوراثية والتحسين الوراثي (BLUP & Punnett Simulator)")
-st.caption("أداة للبحث العلمي التطبيقي لتوقع صفات الهجين (F1 & F2) ونسب السيادة والقيم التربوية لحيوانات المزرعة والدواجن")
+st.title("🧬 المنصة الشاملة للهندسة الوراثية والتحسين الوراثي لحيوانات المزرعة")
+st.caption("برنامج بحثي تطبيقي لتوقع صفات الخلط والتهجين بين السلالات (F1 & F2) مع مربع بانيت والحسابات المندلية والكمية")
 
 # ==========================================
-# 1. خوارزميات الوراثة المندلية (Punnett Engine)
+# 1. قاعدة بيانات السلالات والصفات المرجعية
+# ==========================================
+BREEDS_DATABASE = {
+    "الأبقار (Cattle)": {
+        "هولشتاين (Holstein)": {"milk_mean": 8500, "growth_rate": 1100, "origin": "أوروبي", "traits": "إنتاج حليب مرتفع جداً"},
+        "براون سويس (Brown Swiss)": {"milk_mean": 6500, "growth_rate": 1050, "origin": "أوروبي", "traits": "حليب عالي البروتين وتحمل للظروف"},
+        "جيرسي (Jersey)": {"milk_mean": 5000, "growth_rate": 800, "origin": "أوروبي", "traits": "نسبة دهن عالية جداً في الحليب"},
+        "بلاكبوس / أنغوس (Angus)": {"milk_mean": 2200, "growth_rate": 1450, "origin": "أوروبي", "traits": "إنتاج لحم ممتاز وجودة جثة عالية"},
+        "سيمنتال (Simmental)": {"milk_mean": 5500, "growth_rate": 1350, "origin": "أوروبي", "traits": "ثنائي الغرض (حليب ولحم)"},
+        "سلالة محلية / بلدي": {"milk_mean": 1800, "growth_rate": 650, "origin": "محلي", "traits": "مقاومة عالية للأمراض والحرارة"}
+    },
+    "الدواجن (Poultry)": {
+        "لجهورن (Leghorn)": {"egg_mean": 280, "egg_weight": 62, "body_weight": 1.8, "traits": "إنتاج بيض قياسي عالي"},
+        "رود آيلاند (Rhode Island Red)": {"egg_mean": 240, "egg_weight": 60, "body_weight": 2.9, "traits": "ثنائي الغرض (بيض ولحم) قشرة بني"},
+        "فايومي (Fayoumi)": {"egg_mean": 180, "egg_weight": 46, "body_weight": 1.5, "traits": "مقاومة للأمراض ونضج جنسي مبكر"},
+        "بليموث روك (Plymouth Rock)": {"egg_mean": 220, "egg_weight": 58, "body_weight": 3.0, "traits": "نمو سريع ورائع للخلط"},
+        "دجاج بلدي محلي": {"egg_mean": 140, "egg_weight": 42, "body_weight": 1.4, "traits": "قوة أقلمة وتحمل للظروف البيئية"}
+    },
+    "الأغنام والماعز (Sheep & Goats)": {
+        "نعيمي / العواسي": {"weaning_weight": 28, "litter_size": 1.15, "milk_yield": 150, "traits": "إنتاج حليب ولحم مع تحمل الصحراء"},
+        "عسافي (Assaf)": {"weaning_weight": 32, "litter_size": 1.60, "milk_yield": 380, "traits": "إنتاج حليب مرتفع وتوأمية عالية"},
+        "نجدي": {"weaning_weight": 29, "litter_size": 1.10, "milk_yield": 120, "traits": "قامة عالية وجودة لحم ممتازة"},
+        "روماني / بورولا": {"weaning_weight": 22, "litter_size": 2.10, "milk_yield": 90, "traits": "خصوبة وتوأمية فائقة جداً"},
+        "سلالة محلية": {"weaning_weight": 20, "litter_size": 1.10, "milk_yield": 80, "traits": "أقلمة ممتازة للبيئة المحلية"}
+    }
+}
+
+# ==========================================
+# 2. محرك مربع بانيت المحسن والمعالج
 # ==========================================
 def generate_gametes(genotype):
-    """توليد الأمشاج (Gametes) بناءً على التركيب الوراثي"""
-    # تقسيم التركيب الوراثي إلى أزواج أليلات (مثال: 'RrPp' -> ['Rr', 'Pp'])
+    """توليد الأمشاج بناء على التركيب الوراثي"""
     pairs = [genotype[i:i+2] for i in range(0, len(genotype), 2)]
     gamete_alleles = [list(pair) for pair in pairs]
     gametes = [''.join(g) for g in itertools.product(*gamete_alleles)]
     return gametes
 
 def run_punnett_square(sire_geno, dam_geno):
-    """بناء مربع بانيت وحساب النسب المئوية للتركيب الوراثي"""
+    """بناء مربع بانيت مع معالجة حوافز الجداول لمنع أخطاء PyArrow"""
     sire_gametes = generate_gametes(sire_geno)
     dam_gametes = generate_gametes(dam_geno)
     
@@ -49,230 +66,221 @@ def run_punnett_square(sire_geno, dam_geno):
     for d in dam_gametes:
         row = []
         for s in sire_gametes:
-            # تجميع الأليلات وترتيب السائد قبل المتنحي لكل جين
             offspring_geno = ""
-            for i in range(len(d)):
-                gene_pair = sorted([s[i], d[i]], key=lambda x: (x.lower(), x.isupper() == False))
+            for i in range(min(len(d), len(s))):
+                gene_pair = sorted([s[i], d[i]], key=lambda x: (x.lower(), not x.isupper()))
                 offspring_geno += "".join(gene_pair)
-            row.append(offspring_geno)
-            all_offspring.append(offspring_geno)
+            row.append(str(offspring_geno))
+            all_offspring.append(str(offspring_geno))
         matrix.append(row)
         
     df_punnett = pd.DataFrame(
         matrix, 
-        index=[f"مشيج الأم: {g}" for g in dam_gametes], 
-        columns=[f"مشيج الأب: {g}" for g in sire_gametes]
+        index=[f"مشيج الأنثى: {g}" for g in dam_gametes], 
+        columns=[f"مشيج الذكر: {g}" for g in sire_gametes]
     )
     
+    df_punnett = df_punnett.astype(str)
     counts = Counter(all_offspring)
     total = len(all_offspring)
-    genotype_ratios = {k: {"العدد": v, "النسبة المئوية": f"{(v/total)*100:.1f}%"} for k, v in counts.items()}
     
-    return df_punnett, pd.DataFrame(genotype_ratios).T
+    genotype_ratios = []
+    for geno, count in counts.items():
+        genotype_ratios.append({
+            "التركيب الوراثي (Genotype)": geno,
+            "العدد في المربع": count,
+            "النسبة المئوية (%)": f"{(count/total)*100:.1f}%"
+        })
+        
+    return df_punnett, pd.DataFrame(genotype_ratios)
 
 # ==========================================
-# 2. القائمة الجانبية وتحديد خيارات البحث
+# 3. القائمة الجانبية وإدارة تجربة الخلط
 # ==========================================
-st.sidebar.header("⚙️ إعدادات تجربة التهجين")
+st.sidebar.header("⚙️ إعدادات الخلط والنوع")
 
 species = st.sidebar.selectbox(
-    "1. اختر نوع الكائن الحي:",
-    ["🐔 الدواجن (Poultry)", "🐄 الأبقار (Cattle)", "🐑 الأغنام والماعز (Sheep & Goats)"]
-)
-
-analysis_mode = st.sidebar.radio(
-    "2. نوع التحليل الوراثي:",
-    ["التحليل الشامل (مندلي F1/F2 + كمي BLUP)", "الوراثة المندلية ومربع بانيت فقط", "الوراثة الكمية والقيم التربوية (BLUP)"]
+    "1. اختر نوع الحيوان المراد دراسته:",
+    list(BREEDS_DATABASE.keys())
 )
 
 st.sidebar.markdown("---")
-st.sidebar.info("💡 **نظام التسمية الأليلية:**\n* الحرف الكبير (A, R, P) = أليل سائد\n* الحرف الصغير (a, r, p) = أليل متنحي")
+st.sidebar.info("💡 **شرح ترميز الجينات:**\n* **P / p:** صفة القرون (P سائد عديم القرون، p متنحي بقرون).\n* **R / P:** شكل العرف (R_p_ وردي، r_P_ بازلائي، R_P_ جوزي، rrpp مفرد).\n* **I / E:** لون الريش (I حجب سائد، E أسود سائد).")
 
 # ==========================================
-# 3. قسم الدواجن (Poultry Module)
+# 4. قسم الأبقار الشامل
 # ==========================================
-if "الدواجن" in species:
-    st.header("🐔 وحدة وراثة وتحسين الدواجن")
+if "الأبقار" in species:
+    st.header("🐄 وحدة دراسة خلط سلالات الأبقار")
     
-    tab1, tab2, tab3 = st.tabs(["🧬 الوراثة المندلية (العرف والريش)", "📈 الوراثة الكمية (البيض والوزن)", "📑 تقرير التوقع المباشر"])
+    tab_cross, tab_punnett, tab_quantitative = st.tabs([
+        "🔀 تحديد السلالات والجنس للخلط", 
+        "🧬 تحليل مربع بانيت للصفات الوصفية", 
+        "📈 القيمة التربوية وتوقعات الحليب واللحم"
+    ])
     
-    # ------------------ Tab 1: Mendelian Genetics ------------------
-    with tab1:
-        st.subheader("تحليل صفات شكل العرف ولون الريش (الجيل F1 والجيل F2)")
-        col_m, col_f = st.columns(2)
+    with tab_cross:
+        st.subheader("اختيار الأبوين والسلالات والمرجع الإنتاجي")
+        c1, c2 = st.columns(2)
         
-        with col_m:
-            st.markdown("### ♂️ الأب (Rooster)")
-            comb_m_geno = st.selectbox("جينات العرف (R=وردية, P=بازلائية):", ["RRpP (جوزي)", "RRpp (وردي)", "rrPP (بازلائي)", "rrpp (مفرد)"], key="cmg")
-            feather_m_geno = st.selectbox("جينات لون الريش (I=أبيض سائد, E=أسود):", ["IIEE (أبيض سائد)", "iiEE (أسود)", "iiee (أحمر/بري)"], key="fmg")
-            
-        with col_f:
-            st.markdown("### ♀️ الأم (Hen)")
-            comb_f_geno = st.selectbox("جينات العرف (R=وردية, P=بازلائية):", ["rrpp (مفرد)", "RRpp (وردي)", "rrPP (بازلائي)", "RrPp (جوزي)"], key="cfg")
-            feather_f_geno = st.selectbox("جينات لون الريش (I=أبيض سائد, E=أسود):", ["iiee (أحمر/بري)", "iiEE (أسود)", "IIEE (أبيض سائد)"], key="ffg")
-            
-        # استخلاص التراكيب الوراثية المحددة
-        sire_comb = comb_m_geno.split()[0]
-        dam_comb = comb_f_geno.split()[0]
-        
-        st.markdown("#### 📐 مربع بانيت لتفاهنات شكل العرف (Comb shape cross)")
-        df_p_comb, df_ratio_comb = run_punnett_square(sire_comb, dam_comb)
-        
-        c1, c2 = st.columns([2, 1])
         with c1:
-            st.dataframe(df_p_comb, use_container_width=True)
+            st.markdown("### ♂️ الأب (الذكر / الطروقة)")
+            sire_breed = st.selectbox("اختر سلالة الذكر:", list(BREEDS_DATABASE["الأبقار (Cattle)"].keys()), index=0)
+            sire_info = BREEDS_DATABASE["الأبقار (Cattle)"][sire_breed]
+            st.info(f"📌 **خصائص سلالة {sire_breed}:** {sire_info['traits']}")
+            sire_ebv_milk = st.number_input("القيمة التربوية للبن للذكر EBV (كجم):", value=500.0)
+            sire_horns = st.selectbox("تركيب القرون للذكر:", ["PP (عديم القرون نقي)", "Pp (عديم القرون خليط)", "pp (بقرون)"], key="sh_c")
+
         with c2:
-            st.write("**نسب التراكيب الوراثية (Genotypes):**")
-            st.dataframe(df_ratio_comb)
-            
-        # تفسير الظواهر (Phenotypes) العرف
-        st.markdown("**التوزيع الظاهري المتوقع للعرف (Phenotypic Breakdown):**")
-        walnut_count = sum([1 for g in df_p_comb.values.flatten() if ('R' in g and 'P' in g)])
-        rose_count = sum([1 for g in df_p_comb.values.flatten() if ('R' in g and 'p' in g and 'P' not in g)])
-        pea_count = sum([1 for g in df_p_comb.values.flatten() if ('r' in g and 'P' in g and 'R' not in g)])
-        single_count = sum([1 for g in df_p_comb.values.flatten() if g == 'rrpp'])
-        total_p = len(df_p_comb.values.flatten())
-        
-        st.progress(walnut_count/total_p, text=f"عرف جوزي (Walnut R_P_): {(walnut_count/total_p)*100:.1f}%")
-        st.progress(rose_count/total_p, text=f"عرف وردي (Rose R_pp): {(rose_count/total_p)*100:.1f}%")
-        st.progress(pea_count/total_p, text=f"عرف بازلائي (Pea rrP_): {(pea_count/total_p)*100:.1f}%")
-        st.progress(single_count/total_p, text=f"عرف مفرد (Single rrpp): {(single_count/total_p)*100:.1f}%")
+            st.markdown("### ♀️ الأم (الأنثى / البقرة)")
+            dam_breed = st.selectbox("اختر سلالة الأنثى:", list(BREEDS_DATABASE["الأبقار (Cattle)"].keys()), index=5)
+            dam_info = BREEDS_DATABASE["الأبقار (Cattle)"][dam_breed]
+            st.info(f"📌 **خصائص سلالة {dam_breed}:** {dam_info['traits']}")
+            dam_milk_actual = st.number_input("إنتاج الأم المباشر للحليب (كجم/موسم):", value=float(dam_info['milk_mean']))
+            dam_horns = st.selectbox("تركيب القرون للأنثى:", ["pp (بقرون)", "Pp (عديم القرون خليط)", "PP (عديم القرون نقي)"], key="dh_c")
 
-    # ------------------ Tab 2: Quantitative Genetics (BLUP & EBV) ------------------
-    with tab2:
-        st.subheader("توقع الصفات الإنتاجية اعتماداً على القيمة التربوية (EBV) وقوة الهجين (Heterosis)")
+    with tab_punnett:
+        st.subheader("تحليل مربع بانيت لصفة القرون (Polled vs Horned)")
+        g_sire = sire_horns.split()[0]
+        g_dam = dam_horns.split()[0]
         
-        q_col1, q_col2 = st.columns(2)
-        with q_col1:
-            st.markdown("##### 📊 بيانات الأب والسلالة")
-            sire_ebv_egg = st.number_input("القيمة التربوية للبيض للأب EBV (بيض/سنة):", value=15.0)
-            sire_ebv_weight = st.number_input("القيمة التربوية للوزن للأب EBV (جرام):", value=250.0)
-            
-        with q_col2:
-            st.markdown("##### 📊 بيانات الأم والسلالة")
-            dam_pv_egg = st.number_input("إنتاج الأم المباشر من البيض (بيضة/سنة):", value=220.0)
-            dam_pv_weight = st.number_input("وزن الأم عند 12 أسبوع (جرام):", value=1800.0)
+        df_p_horns, df_r_horns = run_punnett_square(g_sire, g_dam)
+        
+        col_p1, col_p2 = st.columns([2, 1])
+        with col_p1:
+            st.write("**مربع بانيت لمزيج الأمشاج:**")
+            st.table(df_p_horns)
+        with col_p2:
+            st.write("**توزيع الجينات والنسب المئوية:**")
+            st.table(df_r_horns)
 
+        polled_count = sum([1 for g in df_p_horns.values.flatten() if 'P' in g])
+        total_count = len(df_p_horns.values.flatten())
+        st.success(f"🎯 **احتمالية ولادة عجل عديم القرون (Polled Phenotype):** **{(polled_count/total_count)*100:.1f}%**")
+
+    with tab_quantitative:
+        st.subheader("التنبؤ بإنتاج اللبن ومعدل النمو للجيل الأول (F1)")
+        
+        # حساب التوقعات بالقيم التربوية
+        pop_mean = (sire_info['milk_mean'] + dam_info['milk_mean']) / 2
+        h2_milk = 0.30  # المكافئ الوراثي
+        
+        dam_ebv_milk = h2_milk * (dam_milk_actual - dam_info['milk_mean'])
+        expected_f1_ebv = 0.5 * sire_ebv_milk + 0.5 * dam_ebv_milk
+        
+        # معامل قوة الهجين عند الخلط بين سلالتين مختلفين
+        heterosis_rate = 1.08 if sire_breed != dam_breed else 1.00
+        expected_f1_milk = (pop_mean + expected_f1_ebv) * heterosis_rate
+        
+        # النمو اليومي
+        expected_gain = ((sire_info['growth_rate'] + dam_info['growth_rate']) / 2) * (1.10 if sire_breed != dam_breed else 1.0)
+
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("السلالة الناتجة (F1 Cross)", f"{sire_breed[:6]} × {dam_breed[:6]}")
+        m2.metric("القيمة التربوية للنسل (EBV)", f"{expected_f1_ebv:+.1f} كجم")
+        m3.metric("إنتاج الحليب المتوقع للمولود الأنثى", f"{expected_f1_milk:.0f} كجم/موسم")
+        m4.metric("معدل النمو اليومي المتوقع", f"{expected_gain:.0f} جم/يوم")
+
+# ==========================================
+# 5. قسم الدواجن الشامل
+# ==========================================
+elif "الدواجن" in species:
+    st.header("🐔 وحدة تهجين وتحسين الدواجن")
+    
+    t1, t2, t3 = st.tabs(["🔀 تحديد السلالة والجنس", "🧬 الوراثة المندلية (العرف والريش)", "📈 توقعات إنتاج البيض والوزن"])
+    
+    with t1:
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("### ♂️ الديك (Male Rooster)")
+            sire_p_breed = st.selectbox("سلالة الديك:", list(BREEDS_DATABASE["الدواجن (Poultry)"].keys()), index=0)
+            comb_m = st.selectbox("جينات العرف للديك:", ["RrPp (جوزي خليط)", "RRpp (وردي نقي)", "rrPP (بازلائي نقي)", "rrpp (مفرد)"], key="cm_p")
+            feather_m = st.selectbox("جينات لون الريش للديك:", ["IIEE (أبيض سائد نقي)", "iiEE (أسود نقي)", "iiee (ملون/أحمر بري)"], key="fm_p")
+            
+        with c2:
+            st.markdown("### ♀️ الدجاجة (Female Hen)")
+            dam_p_breed = st.selectbox("سلالة الدجاجة:", list(BREEDS_DATABASE["الدواجن (Poultry)"].keys()), index=4)
+            comb_f = st.selectbox("جينات العرف للدجاجة:", ["rrpp (مفرد)", "RRpp (وردي نقي)", "rrPP (بازلائي نقي)", "RrPp (جوزي خليط)"], key="cf_p")
+            feather_f = st.selectbox("جينات لون الريش للدجاجة:", ["iiee (ملون/أحمر بري)", "iiEE (أسود نقي)", "IIEE (أبيض سائد نقي)"], key="ff_p")
+
+    with t2:
+        st.subheader("تحليل وراثة العرف ومربع بانيت")
+        df_p_comb, df_r_comb = run_punnett_square(comb_m.split()[0], comb_f.split()[0])
+        
+        col_a, col_b = st.columns([2, 1])
+        with col_a:
+            st.write("**مربع بانيت لوراثة العرف:**")
+            st.table(df_p_comb)
+        with col_b:
+            st.write("**نسب التراكيب الوراثية:**")
+            st.table(df_r_comb)
+            
+        # تحليل لون الريش
         st.markdown("---")
-        st.markdown("##### 🧬 المعاملات الوراثية للجامعة/المزرعة (Genetic Parameters)")
-        p_c1, p_c2, p_c3 = st.columns(3)
-        mean_egg = p_c1.number_input("متوسط إنتاج العشيرة/السلالة الأصيلة ($\mu$):", value=180.0)
-        h2_egg = p_c2.slider("المكافئ الوراثي للبيض ($h^2$):", 0.05, 0.60, 0.25)
-        heterosis_egg = p_c3.slider("نسبة قوة الهجين المتوقعة للبيض ($H\%$):", 0.0, 20.0, 8.0)
-        
-        # حسابات BLUP و EBV
-        dam_ebv_egg = h2_egg * (dam_pv_egg - mean_egg)
-        expected_ebv_offspring = 0.5 * sire_ebv_egg + 0.5 * dam_ebv_egg
-        expected_performance_egg = (mean_egg + expected_ebv_offspring) * (1 + (heterosis_egg/100))
-        
-        st.success(f"🎯 **النتيجة:** القيمة التربوية المتوقعة للهجين (EBV_F1): **{expected_ebv_offspring:+.2f} بيضة**")
-        st.info(f"📈 **إنتاج البيض المتوقع للأنثى الناتجة في الجيل الأول (F1):** **{expected_performance_egg:.1f} بيضة/سنة** (شاملة قوة الهجين)")
+        st.subheader("توقع لون الريش للجيل الأول")
+        if "II" in feather_m or "II" in feather_f or "Ii" in feather_m or "Ii" in feather_f:
+            st.success("🎨 **اللون المتوقع للريش:** **أبيض سائد** (بسبب وجود جين الحجب السائد I)")
+        elif "EE" in feather_m or "EE" in feather_f:
+            st.info("🎨 **اللون المتوقع للريش:** **أسود / داكن** (جينات E السائدة)")
+        else:
+            st.warning("🎨 **اللون المتوقع للريش:** **ملون / أحمر بري**")
 
-    # ------------------ Tab 3: Summary Report ------------------
-    with tab3:
-        st.subheader("📑 ملخص نتائج محاكاة التهجين")
-        st.json({
-            "الكائن": "دواجن",
-            "تركيب العرف الأب": sire_comb,
-            "تركيب العرف الأم": dam_comb,
-            "إنتاج البيض المتوقع (F1)": f"{expected_performance_egg:.1f} بيضة",
-            "القيمة التربوية المحسوبة (EBV)": f"{expected_ebv_offspring:+.2f}"
-        })
+    with t3:
+        st.subheader("توقع إنتاج البيض وحجم البيضة ووزن الجسم")
+        sire_p_data = BREEDS_DATABASE["الدواجن (Poultry)"][sire_p_breed]
+        dam_p_data = BREEDS_DATABASE["الدواجن (Poultry)"][dam_p_breed]
+        
+        # حساب قوة الهجين لإنتاج البيض (8%) والوزن (5%)
+        heterosis_egg = 1.08 if sire_p_breed != dam_p_breed else 1.00
+        heterosis_body = 1.05 if sire_p_breed != dam_p_breed else 1.00
+        
+        exp_egg_num = ((sire_p_data['egg_mean'] + dam_p_data['egg_mean']) / 2) * heterosis_egg
+        exp_egg_wt = (sire_p_data['egg_weight'] + dam_p_data['egg_weight']) / 2
+        exp_body_wt = ((sire_p_data['body_weight'] + dam_p_data['body_weight']) / 2) * heterosis_body
+        
+        r1, r2, r3 = st.columns(3)
+        r1.metric("إنتاج البيض المتوقع للأنثى الناتجة", f"{exp_egg_num:.0f} بيضة/سنة")
+        r2.metric("متوسط حجم/وزن البيضة", f"{exp_egg_wt:.1f} جرام")
+        r3.metric("وزن الجسم عند النضج", f"{exp_body_wt:.2f} كجم")
 
 # ==========================================
-# 4. قسم الأبقار (Cattle Module)
-# ==========================================
-elif "الأبقار" in species:
-    st.header("🐄 وحدة وراثة وتحسين الأبقار (ألبان ولحوم)")
-    
-    t_c1, t_c2 = st.columns(2)
-    with t_c1:
-        st.subheader("♂️ بيانات الطروقة (Sire/Bull)")
-        horns_sire = st.selectbox("صفة القرون (P=عديم القرون سائد, p=بقرون):", ["PP (عديم القرون نقي)", "Pp (عديم القرون خليط)", "pp (بقرون)"])
-        coat_sire = st.selectbox("لون الشعر:", ["ED_ (أسود سائد)", "ee (أحمر متنحي)"])
-        milk_ebv_sire = st.number_input("القيمة التربوية للحليب للأب EBV (كجم/موسم):", value=650.0)
-        daily_gain_sire = st.number_input("معدل النمو اليومي للأب (جم/يوم):", value=1350)
-        
-    with t_c2:
-        st.subheader("♀️ بيانات البقرة (Dam/Cow)")
-        horns_dam = st.selectbox("صفة القرون للأم:", ["pp (بقرون)", "Pp (عديم القرون خليط)", "PP (عديم القرون نقي)"])
-        coat_dam = st.selectbox("لون الشعر للأم:", ["ee (أحمر متنحي)", "ED_ (أسود سائد)"])
-        milk_record_dam = st.number_input("إنتاج الأم المباشر للحليب (كجم/موسم):", value=5200.0)
-        daily_gain_dam = st.number_input("معدل النمو اليومي للأم (جم/يوم):", value=950)
-
-    st.markdown("---")
-    st.subheader("📐 التحليل الوراثي للجيل الأول (F1 Cross Output)")
-    
-    # حساب القرون
-    g_sire = horns_sire.split()[0]
-    g_dam = horns_dam.split()[0]
-    df_p_horns, df_r_horns = run_punnett_square(g_sire, g_dam)
-    
-    m1, m2, m3 = st.columns(3)
-    
-    # نسبة عديم القرون
-    polled_percent = sum([1 for g in df_p_horns.values.flatten() if 'P' in g]) / len(df_p_horns.values.flatten()) * 100
-    m1.metric("احتمالية ولادة مولود عديم القرون (Polled)", f"{polled_percent:.0f}%")
-    
-    # إنتاج الحليب المتوقع
-    pop_mean_milk = 4500.0
-    h2_milk = 0.30
-    dam_ebv_milk = h2_milk * (milk_record_dam - pop_mean_milk)
-    f1_milk_ebv = 0.5 * milk_ebv_sire + 0.5 * dam_ebv_milk
-    f1_milk_pheno = (pop_mean_milk + f1_milk_ebv) * 1.06 # 6% Heterosis
-    
-    m2.metric("إنتاج الحليب المتوقع للهجين (F1)", f"{f1_milk_pheno:.0f} كجم")
-    
-    # معدل النمو اليومي (لحم)
-    f1_gain = ((daily_gain_sire + daily_gain_dam) / 2) * 1.10 # 10% Heterosis
-    m3.metric("معدل النمو اليومي المتوقع (F1)", f"{f1_gain:.0f} جم/يوم")
-
-    with st.expander("🔍 عرض جدول مربع بانيت لتوارث صفة القرون"):
-        st.dataframe(df_p_horns)
-
-# ==========================================
-# 5. قسم الأغنام والماعز (Sheep & Goats)
+# 6. قسم الأغنام والماعز الشامل
 # ==========================================
 else:
-    st.header("🐑 وحدة وراثة وتناسل الأغنام والماعز")
+    st.header("🐑 وحدة تهجين وتحسين الأغنام والماعز")
     
-    s_col1, s_col2 = st.columns(2)
-    with s_col1:
-        st.subheader("♂️ الكبش / التيس (Male)")
-        sire_twinning_ebv = st.number_input("القيمة التربوية للتوأمية (EBV):", value=0.25)
-        sire_weaning_wt = st.number_input("وزن الفطام للأب (كجم):", value=35.0)
-        
-    with s_col2:
-        st.subheader("♀️ النعجة / العنزة (Female)")
-        dam_litter_size = st.number_input("سجل التوأمية المباشر للأم (مولود/بطن):", value=1.8)
-        dam_weaning_wt = st.number_input("وزن الفطام للأم (كجم):", value=24.0)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("♂️ تحديد الذكر (الكبش/التيس)")
+        s_breed = st.selectbox("سلالة الذكر:", list(BREEDS_DATABASE["الأغنام والماعز (Sheep & Goats)"].keys()), index=1)
+        s_data = BREEDS_DATABASE["الأغنام والماعز (Sheep & Goats)"][s_breed]
+        s_wt = st.number_input("وزن الفطام للذكر (كجم):", value=float(s_data['weaning_weight']))
+        s_litter_ebv = st.number_input("القيمة التربوية للتوأمية للأب:", value=0.20)
+
+    with col2:
+        st.subheader("♀️ تحديد الأنثى (النعجة/العنزة)")
+        d_breed = st.selectbox("سلالة الأنثى:", list(BREEDS_DATABASE["الأغنام والماعز (Sheep & Goats)"].keys()), index=0)
+        d_data = BREEDS_DATABASE["الأغنام والماعز (Sheep & Goats)"][d_breed]
+        d_wt = st.number_input("وزن الفطام للأنثى (كجم):", value=float(d_data['weaning_weight']))
+        d_litter_actual = st.number_input("سجل التوأمية المباشر للأم (مولود/بطن):", value=float(d_data['litter_size']))
 
     st.markdown("---")
-    st.subheader("📊 المؤشرات الوراثية المحسوبة")
+    st.subheader(f"📊 مؤشرات خلط سلالة ({s_breed}) × سلالة ({d_breed})")
     
-    # حساب التوأمية بـ BLUP
-    mean_litter = 1.25
-    h2_litter = 0.12 # مكافئ وراثي منخفض
-    dam_ebv_litter = h2_litter * (dam_litter_size - mean_litter)
-    f1_litter_ebv = 0.5 * sire_twinning_ebv + 0.5 * dam_ebv_litter
-    f1_expected_litter = (mean_litter + f1_litter_ebv) * 1.15 # 15% Heterosis عالية للتوأمية
+    # حساب قوة الهجين
+    heterosis_litter = 1.12 if s_breed != d_breed else 1.00 # 12% للتوأمية
+    heterosis_growth = 1.08 if s_breed != d_breed else 1.00 # 8% لوزن الفطام
     
-    # وزن الفطام
-    f1_weaning_wt = ((sire_weaning_wt + dam_weaning_wt) / 2) * 1.08
+    # حسابات التوأمية
+    mean_litter_pop = (s_data['litter_size'] + d_data['litter_size']) / 2
+    h2_litter = 0.12
+    dam_ebv_litter = h2_litter * (d_litter_actual - d_data['litter_size'])
+    f1_litter_ebv = 0.5 * s_litter_ebv + 0.5 * dam_ebv_litter
+    exp_litter_size = (mean_litter_pop + f1_litter_ebv) * heterosis_litter
     
-    res1, res2 = st.columns(2)
-    res1.metric("معدل التوأمية المتوقع (Litter Size)", f"{f1_expected_litter:.2f} مولود / بطن")
-    res2.metric("وزن الفطام المتوقع للنسل", f"{f1_weaning_wt:.1f} كجم")
-
-# ==========================================
-# 6. المراجع والتأصيل العلمي
-# ==========================================
-st.markdown("---")
-with st.expander("📚 المعادلات والمبادئ الوراثية المستخدمة في البرنامج"):
-    st.latex(r"EBV_{Offspring} = \frac{1}{2} EBV_{Sire} + \frac{1}{2} EBV_{Dam}")
-    st.latex(r"P_{Expected} = (\mu + EBV_{Offspring}) \times \left(1 + \frac{Heterosis\%}{100}\right)")
-    st.markdown("""
-    * **EBV (Estimated Breeding Value):** القيمة التربوية المقدرة للحيوان.
-    * **Heterosis (قوة الهجين):** التفوق الإنتاجي الناتج عن جينات السيادة الفائقة والتباين الوراثي عند خلط السلالات.
-    * **Punnett Square:** المبدأ المندلي لتوزيع الأليلات واستخلاص نسب الجيل الأول والثاني ($F1$ & $F2$).
-    """)
+    exp_weaning_weight = ((s_wt + d_wt) / 2) * heterosis_growth
+    
+    m1, m2, m3 = st.columns(3)
+    m1.metric("معدل التوأمية المتوقع (Litter Size)", f"{exp_litter_size:.2f} مولود / بطن")
+    m2.metric("وزن الفطام المتوقع لهجين F1", f"{exp_weaning_weight:.1f} كجم")
+    m3.metric("إنتاج الحليب للأمهات الناتجة", f"{((s_data['milk_yield'] + d_data['milk_yield'])/2)*1.05:.0f} كجم/موسم")
