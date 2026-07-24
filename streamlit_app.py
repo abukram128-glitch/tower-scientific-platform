@@ -1,474 +1,280 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from scipy.optimize import linprog
-import sqlite3
-import json
-from datetime import datetime
-import plotly.express as px
-import plotly.graph_objects as go
+import itertools
+from collections import Counter
 
 # ==========================================
-# إعدادات الصفحة
+# 0. إعدادات الصفحة والتنسيق العام
 # ==========================================
-
 st.set_page_config(
-    page_title="منصة تاور العلمية",
-    page_icon="🌾",
+    page_title="منصة الهندسة الوراثية والتحسين الوراثي لحيوانات المزرعة",
+    page_icon="🧬",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# ==========================================
-# تهيئة قاعدة البيانات
-# ==========================================
+# نمط CSS مخصص لتحسين مظهر الجداول والمؤشرات
+st.markdown("""
+    <style>
+    .main { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .stMetric { background-color: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; }
+    .punnett-table { text-align: center; font-weight: bold; }
+    .section-header { color: #1e3a8a; border-bottom: 2px solid #3b82f6; padding-bottom: 5px; margin-top: 20px; }
+    </style>
+""", unsafe_allow_html=True)
 
-DB_NAME = "tower.db"
-
-@st.cache_resource
-def init_db():
-    """تهيئة قاعدة البيانات"""
-    conn = sqlite3.connect(DB_NAME, check_same_thread=False)
-    cursor = conn.cursor()
-    
-    # جدول المستخدمين
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        role TEXT NOT NULL,
-        full_name TEXT,
-        title TEXT
-    )
-    ''')
-    
-    # جدول المواد العلفية
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS feeds (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT UNIQUE NOT NULL,
-        category TEXT,
-        protein REAL,
-        energy REAL,
-        price REAL,
-        stock REAL
-    )
-    ''')
-    
-    # جدول التركيبات
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS formulas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
-        sector TEXT,
-        ingredients TEXT,
-        total_cost REAL,
-        protein REAL,
-        created_at TEXT
-    )
-    ''')
-    
-    conn.commit()
-    
-    # إضافة المستخدمين الافتراضيين
-    cursor.execute("SELECT COUNT(*) FROM users")
-    if cursor.fetchone()[0] == 0:
-        users = [
-            ("tower", "202687", "owner", "الاختصاصي م. عبد القادر إسماعيل تاور", "المالك 👑"),
-            ("specialist", "2020", "specialist", "الطبيب البيطري", "مختص تغذية 👨‍🔬"),
-            ("breeder", "2026", "breeder", "المربي", "مربي منتج 🌾")
-        ]
-        cursor.executemany("INSERT INTO users (username, password, role, full_name, title) VALUES (?,?,?,?,?)", users)
-        conn.commit()
-    
-    # إضافة المواد العلفية الافتراضية
-    cursor.execute("SELECT COUNT(*) FROM feeds")
-    if cursor.fetchone()[0] == 0:
-        feeds = [
-            ("ذرة صفراء", "🌾 حبوب", 8.5, 80, 230, 25),
-            ("ذرة بيضاء", "🌾 حبوب", 8.8, 78, 225, 25),
-            ("شعير مطحون", "🌾 حبوب", 11.5, 71, 210, 25),
-            ("كسب فول صويا 44%", "🥜 بروتين", 44, 74, 440, 20),
-            ("كسب فول صويا 48%", "🥜 بروتين", 48, 76, 480, 20),
-            ("كسب عباد الشمس", "🥜 بروتين", 36, 42, 310, 20),
-            ("نخالة قمح", "🌾 مخلفات", 15, 45, 150, 15),
-            ("ملح الطعام", "🧂 أملاح", 0, 0, 30, 20),
-            ("الحجر الجيري", "🧂 أملاح", 0, 0, 40, 20),
-            ("بريمكس دواجن", "💊 إضافات", 0, 0, 230, 10)
-        ]
-        cursor.executemany("INSERT INTO feeds (name, category, protein, energy, price, stock) VALUES (?,?,?,?,?,?)", feeds)
-        conn.commit()
-    
-    return conn
-
-def get_feeds():
-    """جلب المواد العلفية"""
-    conn = init_db()
-    df = pd.read_sql_query("SELECT * FROM feeds", conn)
-    conn.close()
-    return df
-
-def update_stock(name, quantity):
-    """تحديث المخزون"""
-    conn = init_db()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE feeds SET stock = ? WHERE name = ?", (quantity, name))
-    conn.commit()
-    conn.close()
-
-def save_formula(name, sector, ingredients, cost, protein):
-    """حفظ التركيبة"""
-    conn = init_db()
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO formulas (name, sector, ingredients, total_cost, protein, created_at) VALUES (?,?,?,?,?,?)",
-        (name, sector, json.dumps(ingredients), cost, protein, datetime.now().strftime("%Y-%m-%d %H:%M"))
-    )
-    conn.commit()
-    conn.close()
-
-def get_formulas():
-    """جلب التركيبات المحفوظة"""
-    conn = init_db()
-    df = pd.read_sql_query("SELECT * FROM formulas ORDER BY id DESC LIMIT 50", conn)
-    conn.close()
-    return df
-
-def authenticate(username, password):
-    """مصادقة المستخدم"""
-    conn = init_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
-    user = cursor.fetchone()
-    conn.close()
-    if user:
-        return {"id": user[0], "username": user[1], "role": user[3], "full_name": user[4], "title": user[5]}
-    return None
+st.title("🧬 المنصة المتقدمة للهندسة الوراثية والتحسين الوراثي (BLUP & Punnett Simulator)")
+st.caption("أداة للبحث العلمي التطبيقي لتوقع صفات الهجين (F1 & F2) ونسب السيادة والقيم التربوية لحيوانات المزرعة والدواجن")
 
 # ==========================================
-# دوال التحسين
+# 1. خوارزميات الوراثة المندلية (Punnett Engine)
 # ==========================================
+def generate_gametes(genotype):
+    """توليد الأمشاج (Gametes) بناءً على التركيب الوراثي"""
+    # تقسيم التركيب الوراثي إلى أزواج أليلات (مثال: 'RrPp' -> ['Rr', 'Pp'])
+    pairs = [genotype[i:i+2] for i in range(0, len(genotype), 2)]
+    gamete_alleles = [list(pair) for pair in pairs]
+    gametes = [''.join(g) for g in itertools.product(*gamete_alleles)]
+    return gametes
 
-def optimize(selected, prices, proteins, energies, target_protein):
-    """حساب التركيبة المثلى"""
-    n = len(selected)
+def run_punnett_square(sire_geno, dam_geno):
+    """بناء مربع بانيت وحساب النسب المئوية للتركيب الوراثي"""
+    sire_gametes = generate_gametes(sire_geno)
+    dam_gametes = generate_gametes(dam_geno)
     
-    if n < 2:
-        return None
+    matrix = []
+    all_offspring = []
     
-    # دالة الهدف (تقليل التكلفة)
-    c = prices
-    
-    # قيد المساواة: المجموع = 100%
-    A_eq = [[1] * n]
-    b_eq = [100]
-    
-    # قيد البروتين
-    A_eq.append(proteins)
-    b_eq.append(target_protein)
-    
-    # حدود المكونات
-    bounds = [(0, 100) for _ in range(n)]
-    
-    try:
-        result = linprog(c, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
-        if result.success:
-            percentages = {}
-            total_cost = 0
-            total_protein = 0
-            
-            for i, name in enumerate(selected):
-                if result.x[i] > 0.01:
-                    percentages[name] = result.x[i]
-                    total_cost += result.x[i] * prices[i] / 100
-                    total_protein += result.x[i] * proteins[i] / 100
-            
-            return {
-                "success": True,
-                "percentages": percentages,
-                "total_cost": total_cost,
-                "protein": total_protein
-            }
-        return {"success": False, "message": str(result.message)}
-    except Exception as e:
-        return {"success": False, "message": str(e)}
-
-# ==========================================
-# واجهة تسجيل الدخول
-# ==========================================
-
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-    st.session_state.user = None
-    st.session_state.role = None
-    st.session_state.name = None
-
-if not st.session_state.logged_in:
-    st.markdown("""
-    <div style="text-align: center; padding: 50px;">
-        <h1 style="color: #2e7d32;">🌾 منصة تاور العلمية</h1>
-        <h3>للانتاج الحيواني وتركيب الاعلاف</h3>
-        <p>الاختصاصي م. عبد القادر إسماعيل تاور</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        username = st.text_input("👤 اسم المستخدم", placeholder="tower / specialist / breeder")
-        password = st.text_input("🔑 كلمة المرور", type="password")
+    for d in dam_gametes:
+        row = []
+        for s in sire_gametes:
+            # تجميع الأليلات وترتيب السائد قبل المتنحي لكل جين
+            offspring_geno = ""
+            for i in range(len(d)):
+                gene_pair = sorted([s[i], d[i]], key=lambda x: (x.lower(), x.isupper() == False))
+                offspring_geno += "".join(gene_pair)
+            row.append(offspring_geno)
+            all_offspring.append(offspring_geno)
+        matrix.append(row)
         
-        if st.button("تسجيل الدخول", type="primary", use_container_width=True):
-            if username and password:
-                user = authenticate(username, password)
-                if user:
-                    st.session_state.logged_in = True
-                    st.session_state.user = user
-                    st.session_state.role = user["role"]
-                    st.session_state.name = user["full_name"]
-                    st.rerun()
-                else:
-                    st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة")
-            else:
-                st.warning("⚠️ يرجى إدخال البيانات")
-        
-        with st.expander("ℹ️ معلومات الدخول"):
-            st.markdown("""
-            | الاسم | المستخدم | كلمة المرور |
-            |-------|----------|-------------|
-            | تاور | tower | 202687 |
-            | مختص | specialist | 2020 |
-            | مربي | breeder | 2026 |
-            """)
-    st.stop()
+    df_punnett = pd.DataFrame(
+        matrix, 
+        index=[f"مشيج الأم: {g}" for g in dam_gametes], 
+        columns=[f"مشيج الأب: {g}" for g in sire_gametes]
+    )
+    
+    counts = Counter(all_offspring)
+    total = len(all_offspring)
+    genotype_ratios = {k: {"العدد": v, "النسبة المئوية": f"{(v/total)*100:.1f}%"} for k, v in counts.items()}
+    
+    return df_punnett, pd.DataFrame(genotype_ratios).T
 
 # ==========================================
-# الشريط الجانبي
+# 2. القائمة الجانبية وتحديد خيارات البحث
 # ==========================================
+st.sidebar.header("⚙️ إعدادات تجربة التهجين")
 
-init_db()
+species = st.sidebar.selectbox(
+    "1. اختر نوع الكائن الحي:",
+    ["🐔 الدواجن (Poultry)", "🐄 الأبقار (Cattle)", "🐑 الأغنام والماعز (Sheep & Goats)"]
+)
 
-with st.sidebar:
-    st.markdown(f"""
-    <div style="text-align: center; padding: 15px;">
-        <h3 style="color: #2e7d32;">{st.session_state.name}</h3>
-        <p style="color: #888;">{st.session_state.user['title']}</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
-    menu = st.radio("القائمة", [
-        "🏠 الرئيسية",
-        "🔬 تركيب الأعلاف",
-        "📦 المخزون",
-        "📊 التركيبات السابقة",
-        "📚 المساعدة"
-    ], label_visibility="collapsed")
-    
-    st.markdown("---")
-    
-    if st.button("🚪 تسجيل الخروج", use_container_width=True):
-        st.session_state.logged_in = False
-        st.rerun()
-    
-    st.markdown("""
-    <div style="text-align: center; font-size: 11px; color: #888; margin-top: 20px;">
-        © 2026 منصة تاور العلمية<br>
-        م. عبد القادر إسماعيل تاور
-    </div>
-    """, unsafe_allow_html=True)
+analysis_mode = st.sidebar.radio(
+    "2. نوع التحليل الوراثي:",
+    ["التحليل الشامل (مندلي F1/F2 + كمي BLUP)", "الوراثة المندلية ومربع بانيت فقط", "الوراثة الكمية والقيم التربوية (BLUP)"]
+)
+
+st.sidebar.markdown("---")
+st.sidebar.info("💡 **نظام التسمية الأليلية:**\n* الحرف الكبير (A, R, P) = أليل سائد\n* الحرف الصغير (a, r, p) = أليل متنحي")
 
 # ==========================================
-# الصفحات
+# 3. قسم الدواجن (Poultry Module)
 # ==========================================
-
-if menu == "🏠 الرئيسية":
-    st.markdown("""
-    <div style="background: linear-gradient(135deg, #1b5e20, #2e7d32); padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 30px;">
-        <h1 style="color: white;">🌾 منصة تاور العلمية</h1>
-        <p style="color: white;">للانتاج الحيواني وتركيب الاعلاف</p>
-    </div>
-    """, unsafe_allow_html=True)
+if "الدواجن" in species:
+    st.header("🐔 وحدة وراثة وتحسين الدواجن")
     
-    feeds = get_feeds()
-    formulas = get_formulas()
+    tab1, tab2, tab3 = st.tabs(["🧬 الوراثة المندلية (العرف والريش)", "📈 الوراثة الكمية (البيض والوزن)", "📑 تقرير التوقع المباشر"])
     
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("📦 المواد العلفية", len(feeds))
-    with col2:
-        st.metric("📝 التركيبات", len(formulas))
-    with col3:
-        st.metric("📊 متوسط التكلفة", f"${formulas['total_cost'].mean():.0f}" if not formulas.empty else "$0")
-    with col4:
-        st.metric("⚠️ مواد منخفضة", len(feeds[feeds['stock'] < 5]))
-    
-    st.markdown("---")
-    
-    if not feeds.empty:
-        fig = px.pie(feeds, names='category', title='توزيع المواد حسب التصنيف', hole=0.3)
-        st.plotly_chart(fig, use_container_width=True)
-
-elif menu == "🔬 تركيب الأعلاف":
-    st.subheader("🔬 محرك تركيب الأعلاف الذكي")
-    
-    feeds = get_feeds()
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        sector = st.selectbox("القطاع الإنتاجي", ["دواجن لاحم", "دواجن بياض", "أبقار", "أغنام وماعز", "عام"])
-        target_protein = st.slider("نسبة البروتين المستهدفة (%)", 5.0, 40.0, 16.0, 0.5)
-    with col2:
-        formula_name = st.text_input("اسم التركيبة", value=f"خلطة {datetime.now().strftime('%Y%m%d')}")
-    
-    st.markdown("---")
-    st.subheader("اختر المكونات")
-    
-    selected = []
-    prices = []
-    proteins = []
-    energies = []
-    
-    cols = st.columns(3)
-    for idx, row in feeds.iterrows():
-        with cols[idx % 3]:
-            if st.checkbox(f"{row['name']} (المتبقي: {row['stock']:.1f} طن)"):
-                price = st.number_input(f"سعر {row['name']}", value=float(row['price']), key=f"price_{row['id']}", step=5.0)
-                selected.append(row['name'])
-                prices.append(price)
-                proteins.append(row['protein'])
-                energies.append(row['energy'])
-    
-    if st.button("🚀 حساب التركيبة", type="primary", use_container_width=True):
-        if len(selected) < 2:
-            st.warning("⚠️ يرجى اختيار مكونين على الأقل")
-        else:
-            with st.spinner("جاري الحساب..."):
-                result = optimize(selected, prices, proteins, energies, target_protein)
-                
-                if result and result["success"]:
-                    st.balloons()
-                    st.success("✅ تم حساب التركيبة بنجاح!")
-                    
-                    col_r1, col_r2 = st.columns(2)
-                    with col_r1:
-                        st.markdown("### المكونات")
-                        for name, pct in result["percentages"].items():
-                            st.markdown(f"- **{name}**: {pct:.1f}% ({pct*10:.1f} كجم/طن)")
-                    
-                    with col_r2:
-                        st.markdown("### التكاليف")
-                        st.metric("💰 تكلفة الطن", f"${result['total_cost']:.2f}")
-                        st.metric("🥩 نسبة البروتين", f"{result['protein']:.1f}%")
-                    
-                    st.session_state.last_formula = result["percentages"]
-                    st.session_state.last_cost = result["total_cost"]
-                    
-                    # حفظ التركيبة
-                    save_formula(formula_name, sector, result["percentages"], result["total_cost"], result["protein"])
-                    st.success("✅ تم حفظ التركيبة")
-                    
-                else:
-                    st.error("❌ لم يتم إيجاد حل")
-                    st.info("💡 نصيحة: أضف المزيد من المكونات أو خفض نسبة البروتين")
-
-elif menu == "📦 المخزون":
-    st.subheader("📦 إدارة المخزون")
-    
-    feeds = get_feeds()
-    
-    if 'last_formula' in st.session_state:
-        with st.expander("🔄 خصم آخر خلطة", expanded=False):
-            tons = st.number_input("الكمية (طن)", min_value=0.1, value=1.0, step=0.5)
-            if st.button("خصم من المخزون"):
-                for name, pct in st.session_state.last_formula.items():
-                    feed = feeds[feeds['name'] == name]
-                    if not feed.empty:
-                        new_stock = feed.iloc[0]['stock'] - (pct / 100) * tons
-                        update_stock(name, max(0, new_stock))
-                st.success("تم الخصم")
-                st.rerun()
-    
-    st.markdown("---")
-    
-    for _, row in feeds.iterrows():
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            st.write(f"**{row['name']}** - {row['category']}")
-        with col2:
-            if st.session_state.role == "owner":
-                new_stock = st.number_input("طن", value=float(row['stock']), key=f"stock_{row['id']}", label_visibility="collapsed")
-                if new_stock != row['stock']:
-                    update_stock(row['name'], new_stock)
-                    st.rerun()
-            else:
-                if row['stock'] < 2:
-                    st.error(f"{row['stock']:.1f} طن 🔴")
-                elif row['stock'] < 5:
-                    st.warning(f"{row['stock']:.1f} طن 🟡")
-                else:
-                    st.success(f"{row['stock']:.1f} طن 🟢")
-
-elif menu == "📊 التركيبات السابقة":
-    st.subheader("📊 التركيبات السابقة")
-    
-    formulas = get_formulas()
-    
-    if formulas.empty:
-        st.info("لا توجد تركيبات محفوظة")
-    else:
-        for _, row in formulas.iterrows():
-            with st.expander(f"{row['created_at']} - {row['name']} - ${row['total_cost']:.2f}"):
-                ingredients = json.loads(row['ingredients'])
-                for name, pct in ingredients.items():
-                    st.write(f"- {name}: {pct:.1f}% ({pct*10:.1f} كجم)")
-                
-                if st.button(f"استخدام", key=f"use_{row['id']}"):
-                    st.session_state.last_formula = ingredients
-                    st.session_state.last_cost = row['total_cost']
-                    st.success("تم تحميل التركيبة")
-
-elif menu == "📚 المساعدة":
-    st.subheader("📚 المساعدة والدليل")
-    
-    tab1, tab2, tab3 = st.tabs(["📖 الدليل", "🔑 الصلاحيات", "❓ الأسئلة"])
-    
+    # ------------------ Tab 1: Mendelian Genetics ------------------
     with tab1:
-        st.markdown("""
-        ### كيفية الاستخدام
+        st.subheader("تحليل صفات شكل العرف ولون الريش (الجيل F1 والجيل F2)")
+        col_m, col_f = st.columns(2)
         
-        1. اختر القطاع الإنتاجي المناسب
-        2. حدد نسبة البروتين المستهدفة
-        3. اختر المكونات العلفية المتوفرة
-        4. اضغط "حساب التركيبة"
-        5. استخدم النتيجة في مزرعتك
-        """)
-    
-    with tab2:
-        st.markdown("""
-        ### أكواد الدخول
+        with col_m:
+            st.markdown("### ♂️ الأب (Rooster)")
+            comb_m_geno = st.selectbox("جينات العرف (R=وردية, P=بازلائية):", ["RRpP (جوزي)", "RRpp (وردي)", "rrPP (بازلائي)", "rrpp (مفرد)"], key="cmg")
+            feather_m_geno = st.selectbox("جينات لون الريش (I=أبيض سائد, E=أسود):", ["IIEE (أبيض سائد)", "iiEE (أسود)", "iiee (أحمر/بري)"], key="fmg")
+            
+        with col_f:
+            st.markdown("### ♀️ الأم (Hen)")
+            comb_f_geno = st.selectbox("جينات العرف (R=وردية, P=بازلائية):", ["rrpp (مفرد)", "RRpp (وردي)", "rrPP (بازلائي)", "RrPp (جوزي)"], key="cfg")
+            feather_f_geno = st.selectbox("جينات لون الريش (I=أبيض سائد, E=أسود):", ["iiee (أحمر/بري)", "iiEE (أسود)", "IIEE (أبيض سائد)"], key="ffg")
+            
+        # استخلاص التراكيب الوراثية المحددة
+        sire_comb = comb_m_geno.split()[0]
+        dam_comb = comb_f_geno.split()[0]
         
-        | الاسم | المستخدم | كلمة المرور |
-        |-------|----------|-------------|
-        | تاور (مالك) | tower | 202687 |
-        | مختص | specialist | 2020 |
-        | مربي | breeder | 2026 |
-        """)
-    
-    with tab3:
-        st.markdown("""
-        ### أسئلة شائعة
+        st.markdown("#### 📐 مربع بانيت لتفاهنات شكل العرف (Comb shape cross)")
+        df_p_comb, df_ratio_comb = run_punnett_square(sire_comb, dam_comb)
         
-        **ماذا أفعل إذا لم يظهر حل؟**
-        أضف مكونات أكثر أو خفض نسبة البروتين.
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            st.dataframe(df_p_comb, use_container_width=True)
+        with c2:
+            st.write("**نسب التراكيب الوراثية (Genotypes):**")
+            st.dataframe(df_ratio_comb)
+            
+        # تفسير الظواهر (Phenotypes) العرف
+        st.markdown("**التوزيع الظاهري المتوقع للعرف (Phenotypic Breakdown):**")
+        walnut_count = sum([1 for g in df_p_comb.values.flatten() if ('R' in g and 'P' in g)])
+        rose_count = sum([1 for g in df_p_comb.values.flatten() if ('R' in g and 'p' in g and 'P' not in g)])
+        pea_count = sum([1 for g in df_p_comb.values.flatten() if ('r' in g and 'P' in g and 'R' not in g)])
+        single_count = sum([1 for g in df_p_comb.values.flatten() if g == 'rrpp'])
+        total_p = len(df_p_comb.values.flatten())
         
-        **كيف أعدل الأسعار؟**
-        صلاحية المالك فقط.
-        
-        **للتواصل؟**
-        تواصل مع الاختصاصي م. عبد القادر إسماعيل تاور
-        """)
+        st.progress(walnut_count/total_p, text=f"عرف جوزي (Walnut R_P_): {(walnut_count/total_p)*100:.1f}%")
+        st.progress(rose_count/total_p, text=f"عرف وردي (Rose R_pp): {(rose_count/total_p)*100:.1f}%")
+        st.progress(pea_count/total_p, text=f"عرف بازلائي (Pea rrP_): {(pea_count/total_p)*100:.1f}%")
+        st.progress(single_count/total_p, text=f"عرف مفرد (Single rrpp): {(single_count/total_p)*100:.1f}%")
 
+    # ------------------ Tab 2: Quantitative Genetics (BLUP & EBV) ------------------
+    with tab2:
+        st.subheader("توقع الصفات الإنتاجية اعتماداً على القيمة التربوية (EBV) وقوة الهجين (Heterosis)")
+        
+        q_col1, q_col2 = st.columns(2)
+        with q_col1:
+            st.markdown("##### 📊 بيانات الأب والسلالة")
+            sire_ebv_egg = st.number_input("القيمة التربوية للبيض للأب EBV (بيض/سنة):", value=15.0)
+            sire_ebv_weight = st.number_input("القيمة التربوية للوزن للأب EBV (جرام):", value=250.0)
+            
+        with q_col2:
+            st.markdown("##### 📊 بيانات الأم والسلالة")
+            dam_pv_egg = st.number_input("إنتاج الأم المباشر من البيض (بيضة/سنة):", value=220.0)
+            dam_pv_weight = st.number_input("وزن الأم عند 12 أسبوع (جرام):", value=1800.0)
+
+        st.markdown("---")
+        st.markdown("##### 🧬 المعاملات الوراثية للجامعة/المزرعة (Genetic Parameters)")
+        p_c1, p_c2, p_c3 = st.columns(3)
+        mean_egg = p_c1.number_input("متوسط إنتاج العشيرة/السلالة الأصيلة ($\mu$):", value=180.0)
+        h2_egg = p_c2.slider("المكافئ الوراثي للبيض ($h^2$):", 0.05, 0.60, 0.25)
+        heterosis_egg = p_c3.slider("نسبة قوة الهجين المتوقعة للبيض ($H\%$):", 0.0, 20.0, 8.0)
+        
+        # حسابات BLUP و EBV
+        dam_ebv_egg = h2_egg * (dam_pv_egg - mean_egg)
+        expected_ebv_offspring = 0.5 * sire_ebv_egg + 0.5 * dam_ebv_egg
+        expected_performance_egg = (mean_egg + expected_ebv_offspring) * (1 + (heterosis_egg/100))
+        
+        st.success(f"🎯 **النتيجة:** القيمة التربوية المتوقعة للهجين (EBV_F1): **{expected_ebv_offspring:+.2f} بيضة**")
+        st.info(f"📈 **إنتاج البيض المتوقع للأنثى الناتجة في الجيل الأول (F1):** **{expected_performance_egg:.1f} بيضة/سنة** (شاملة قوة الهجين)")
+
+    # ------------------ Tab 3: Summary Report ------------------
+    with tab3:
+        st.subheader("📑 ملخص نتائج محاكاة التهجين")
+        st.json({
+            "الكائن": "دواجن",
+            "تركيب العرف الأب": sire_comb,
+            "تركيب العرف الأم": dam_comb,
+            "إنتاج البيض المتوقع (F1)": f"{expected_performance_egg:.1f} بيضة",
+            "القيمة التربوية المحسوبة (EBV)": f"{expected_ebv_offspring:+.2f}"
+        })
+
+# ==========================================
+# 4. قسم الأبقار (Cattle Module)
+# ==========================================
+elif "الأبقار" in species:
+    st.header("🐄 وحدة وراثة وتحسين الأبقار (ألبان ولحوم)")
+    
+    t_c1, t_c2 = st.columns(2)
+    with t_c1:
+        st.subheader("♂️ بيانات الطروقة (Sire/Bull)")
+        horns_sire = st.selectbox("صفة القرون (P=عديم القرون سائد, p=بقرون):", ["PP (عديم القرون نقي)", "Pp (عديم القرون خليط)", "pp (بقرون)"])
+        coat_sire = st.selectbox("لون الشعر:", ["ED_ (أسود سائد)", "ee (أحمر متنحي)"])
+        milk_ebv_sire = st.number_input("القيمة التربوية للحليب للأب EBV (كجم/موسم):", value=650.0)
+        daily_gain_sire = st.number_input("معدل النمو اليومي للأب (جم/يوم):", value=1350)
+        
+    with t_c2:
+        st.subheader("♀️ بيانات البقرة (Dam/Cow)")
+        horns_dam = st.selectbox("صفة القرون للأم:", ["pp (بقرون)", "Pp (عديم القرون خليط)", "PP (عديم القرون نقي)"])
+        coat_dam = st.selectbox("لون الشعر للأم:", ["ee (أحمر متنحي)", "ED_ (أسود سائد)"])
+        milk_record_dam = st.number_input("إنتاج الأم المباشر للحليب (كجم/موسم):", value=5200.0)
+        daily_gain_dam = st.number_input("معدل النمو اليومي للأم (جم/يوم):", value=950)
+
+    st.markdown("---")
+    st.subheader("📐 التحليل الوراثي للجيل الأول (F1 Cross Output)")
+    
+    # حساب القرون
+    g_sire = horns_sire.split()[0]
+    g_dam = horns_dam.split()[0]
+    df_p_horns, df_r_horns = run_punnett_square(g_sire, g_dam)
+    
+    m1, m2, m3 = st.columns(3)
+    
+    # نسبة عديم القرون
+    polled_percent = sum([1 for g in df_p_horns.values.flatten() if 'P' in g]) / len(df_p_horns.values.flatten()) * 100
+    m1.metric("احتمالية ولادة مولود عديم القرون (Polled)", f"{polled_percent:.0f}%")
+    
+    # إنتاج الحليب المتوقع
+    pop_mean_milk = 4500.0
+    h2_milk = 0.30
+    dam_ebv_milk = h2_milk * (milk_record_dam - pop_mean_milk)
+    f1_milk_ebv = 0.5 * milk_ebv_sire + 0.5 * dam_ebv_milk
+    f1_milk_pheno = (pop_mean_milk + f1_milk_ebv) * 1.06 # 6% Heterosis
+    
+    m2.metric("إنتاج الحليب المتوقع للهجين (F1)", f"{f1_milk_pheno:.0f} كجم")
+    
+    # معدل النمو اليومي (لحم)
+    f1_gain = ((daily_gain_sire + daily_gain_dam) / 2) * 1.10 # 10% Heterosis
+    m3.metric("معدل النمو اليومي المتوقع (F1)", f"{f1_gain:.0f} جم/يوم")
+
+    with st.expander("🔍 عرض جدول مربع بانيت لتوارث صفة القرون"):
+        st.dataframe(df_p_horns)
+
+# ==========================================
+# 5. قسم الأغنام والماعز (Sheep & Goats)
+# ==========================================
+else:
+    st.header("🐑 وحدة وراثة وتناسل الأغنام والماعز")
+    
+    s_col1, s_col2 = st.columns(2)
+    with s_col1:
+        st.subheader("♂️ الكبش / التيس (Male)")
+        sire_twinning_ebv = st.number_input("القيمة التربوية للتوأمية (EBV):", value=0.25)
+        sire_weaning_wt = st.number_input("وزن الفطام للأب (كجم):", value=35.0)
+        
+    with s_col2:
+        st.subheader("♀️ النعجة / العنزة (Female)")
+        dam_litter_size = st.number_input("سجل التوأمية المباشر للأم (مولود/بطن):", value=1.8)
+        dam_weaning_wt = st.number_input("وزن الفطام للأم (كجم):", value=24.0)
+
+    st.markdown("---")
+    st.subheader("📊 المؤشرات الوراثية المحسوبة")
+    
+    # حساب التوأمية بـ BLUP
+    mean_litter = 1.25
+    h2_litter = 0.12 # مكافئ وراثي منخفض
+    dam_ebv_litter = h2_litter * (dam_litter_size - mean_litter)
+    f1_litter_ebv = 0.5 * sire_twinning_ebv + 0.5 * dam_ebv_litter
+    f1_expected_litter = (mean_litter + f1_litter_ebv) * 1.15 # 15% Heterosis عالية للتوأمية
+    
+    # وزن الفطام
+    f1_weaning_wt = ((sire_weaning_wt + dam_weaning_wt) / 2) * 1.08
+    
+    res1, res2 = st.columns(2)
+    res1.metric("معدل التوأمية المتوقع (Litter Size)", f"{f1_expected_litter:.2f} مولود / بطن")
+    res2.metric("وزن الفطام المتوقع للنسل", f"{f1_weaning_wt:.1f} كجم")
+
+# ==========================================
+# 6. المراجع والتأصيل العلمي
+# ==========================================
 st.markdown("---")
-st.caption("© 2026 - الاختصاصي م. عبد القادر إسماعيل تاور")
+with st.expander("📚 المعادلات والمبادئ الوراثية المستخدمة في البرنامج"):
+    st.latex(r"EBV_{Offspring} = \frac{1}{2} EBV_{Sire} + \frac{1}{2} EBV_{Dam}")
+    st.latex(r"P_{Expected} = (\mu + EBV_{Offspring}) \times \left(1 + \frac{Heterosis\%}{100}\right)")
+    st.markdown("""
+    * **EBV (Estimated Breeding Value):** القيمة التربوية المقدرة للحيوان.
+    * **Heterosis (قوة الهجين):** التفوق الإنتاجي الناتج عن جينات السيادة الفائقة والتباين الوراثي عند خلط السلالات.
+    * **Punnett Square:** المبدأ المندلي لتوزيع الأليلات واستخلاص نسب الجيل الأول والثاني ($F1$ & $F2$).
+    """)
+```eof
+
