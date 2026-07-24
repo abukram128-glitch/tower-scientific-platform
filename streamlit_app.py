@@ -6,353 +6,377 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # ==========================================
-# 1. تهيئة الصفحة والأنماط (Page Configuration & CSS)
+# 1. تهيئة الصفحة والأمان والحماية ضد النسخ والسرقة
 # ==========================================
 st.set_page_config(
-    page_title="المنصة الشاملة للهندسة الوراثية وتغذية الحيوان",
+    page_title="منصة التغذية التطبيقية والهندسة الوراثية - د. عبد القادر إسماعيل",
     page_icon="🧬",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# إضافة CSS مخصص لتحسين الواجهة العربية
+# تخصيص CSS وأكواد JavaScript لحماية التطبيق وتجميل الواجهة
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
-    html, body, [class*="css"]  {
+    
+    /* منع تحديد النصوص للحماية من النسخ */
+    * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+    }
+
+    html, body, [class*="css"] {
         font-family: 'Cairo', sans-serif;
         direction: rtl;
         text-align: right;
     }
-    .stMetric {
-        background-color: #f8fafc;
-        border: 1px solid #e2e8f0;
-        padding: 15px;
-        border-radius: 10px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    
+    /* إخفاء عناصر Streamlit التلقائية */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    .app-header {
+        background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+        color: #ffffff;
+        padding: 24px;
+        border-radius: 12px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        border-right: 6px solid #0284C7;
     }
-    .custom-card {
-        background-color: #ffffff;
+    
+    .app-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin: 0;
+        color: #F8FAFC;
+    }
+    
+    .app-subtitle {
+        font-size: 0.95rem;
+        color: #38BDF8;
+        margin-top: 6px;
+        font-weight: 600;
+    }
+    
+    .stMetric {
+        background-color: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        padding: 16px;
         border-radius: 8px;
-        padding: 20px;
-        border-right: 5px solid #2563eb;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        margin-bottom: 15px;
+    }
+    
+    .card-info {
+        background-color: #F1F5F9;
+        border-right: 4px solid #0284C7;
+        padding: 16px;
+        border-radius: 6px;
+        margin-top: 15px;
+        color: #334155;
+    }
+    
+    .watermark {
+        font-size: 0.8rem;
+        color: #64748B;
+        text-align: center;
+        padding: 10px;
     }
     </style>
+
+    <!-- سكربت حماية لمنع الزر الأيمن واختصارات الفحص -->
+    <script>
+    document.addEventListener('contextmenu', event => event.preventDefault());
+    document.onkeydown = function(e) {
+        if (e.keyCode == 123 || 
+            (e.ctrlKey && e.shiftKey && e.keyCode == 73) || 
+            (e.ctrlKey && e.keyCode == 85)) {
+            return false;
+        }
+    }
+    </script>
 """, unsafe_allow_html=True)
 
 
 # ==========================================
-# 2. قواعد البيانات المدمجة (Embedded Data Engine)
+# 2. قواعد البيانات والمدخلات الفنية الموسعة
 # ==========================================
 class DatabaseEngine:
     @staticmethod
     def get_livestock_breeds():
         return {
             "الأبقار": {
-                "الكنانة (سوداني)": {"milk": 1200, "heat_tol": 95, "meat": 60, "origin": "محلية"},
-                "البتانة (سوداني)": {"milk": 1500, "heat_tol": 90, "meat": 65, "origin": "محلية"},
-                "البقارة (سوداني)": {"milk": 600, "heat_tol": 98, "meat": 75, "origin": "محلية"},
-                "هولشتاين (Holstein)": {"milk": 8000, "heat_tol": 40, "meat": 50, "origin": "عالمية"},
-                "بلاكبوس أنغوس (Angus)": {"milk": 800, "heat_tol": 55, "meat": 95, "origin": "عالمية"}
+                "الكنانة (سوداني)": {"milk": 1200, "heat_tol": 95, "meat": 60},
+                "البطانه (سوداني)": {"milk": 1500, "heat_tol": 90, "meat": 65},
+                "البقارة (سوداني)": {"milk": 600, "heat_tol": 98, "meat": 75},
+                "هولشتاين (Holstein)": {"milk": 8000, "heat_tol": 40, "meat": 50},
+                "بلاكبوس أنغوس (Angus)": {"milk": 800, "heat_tol": 55, "meat": 95}
             },
             "الأغنام والماعز": {
-                "الحمري (سوداني)": {"milk": 200, "heat_tol": 95, "growth": 85, "origin": "محلية"},
-                "الكباشي (سوداني)": {"milk": 150, "heat_tol": 98, "growth": 90, "origin": "محلية"},
-                "الدباسي (سوداني)": {"milk": 180, "heat_tol": 92, "growth": 88, "origin": "محلية"},
-                "الماعز النوبي": {"milk": 600, "heat_tol": 90, "growth": 60, "origin": "محلية"},
-                "ماعز البور (Boer)": {"milk": 300, "heat_tol": 70, "growth": 98, "origin": "عالمية"},
-                "غنم العساف (Assaf)": {"milk": 1200, "heat_tol": 65, "growth": 75, "origin": "عالمية"}
+                "الحمري (سوداني)": {"milk": 200, "heat_tol": 95, "growth": 85},
+                "الكباشي (سوداني)": {"milk": 150, "heat_tol": 98, "growth": 90},
+                "الدباسي (سوداني)": {"milk": 180, "heat_tol": 92, "growth": 88},
+                "الماعز النوبي": {"milk": 600, "heat_tol": 90, "growth": 60},
+                "ماعز البور (Boer)": {"milk": 300, "heat_tol": 70, "growth": 98},
+                "غنم العساف (Assaf)": {"milk": 1200, "heat_tol": 65, "growth": 75}
             },
-            "طيور الزينة والدواجن": {
-                "الدجاج البلدي السوداني": {"egg": 120, "heat_tol": 98, "weight": 1.3, "fcr": 4.5},
-                "الفيومي": {"egg": 200, "heat_tol": 90, "weight": 1.5, "fcr": 3.8},
-                "اللجهورن (Leghorn)": {"egg": 300, "heat_tol": 60, "weight": 1.8, "fcr": 2.1},
-                "دجاج السيراما (Serama)": {"egg": 80, "heat_tol": 80, "weight": 0.5, "fcr": 5.0},
-                "البادجي (زينة)": {"egg": 0, "heat_tol": 85, "weight": 0.04, "fcr": 0},
-                "الكوكاتيل (زينة)": {"egg": 0, "heat_tol": 80, "weight": 0.09, "fcr": 0}
+            "الدواجن وطيور الزينة": {
+                "الدجاج البلدي السوداني": {"egg": 120, "heat_tol": 98, "weight": 1.3},
+                "الفيومي": {"egg": 200, "heat_tol": 90, "weight": 1.5},
+                "اللجهورن (Leghorn)": {"egg": 300, "heat_tol": 60, "weight": 1.8},
+                "دجاج السيراما (Serama)": {"egg": 80, "heat_tol": 80, "weight": 0.5},
+                "البادجي": {"egg": 0, "heat_tol": 85, "weight": 0.04},
+                "الكوكاتيل": {"egg": 0, "heat_tol": 80, "weight": 0.09}
             }
         }
 
     @staticmethod
-    def get_feed_ingredients():
+    def get_expanded_feed_ingredients():
         return pd.DataFrame([
-            {"المادة الخام": "ذرة رفيعة (فتريتة)", "CP": 9.0, "ME_Kcal": 3200, "CF": 2.5, "EE": 3.5, "Cost_Kg": 1.20, "Max_Include": 65.0},
-            {"المادة الخام": "عسبار عباد الشمس (Sunflower Cake)", "CP": 28.0, "ME_Kcal": 2200, "CF": 22.0, "EE": 6.0, "Cost_Kg": 1.75, "Max_Include": 25.0},
-            {"المادة الخام": "أمباز السوداني (Groundnut Cake)", "CP": 45.0, "ME_Kcal": 2500, "CF": 6.5, "EE": 7.0, "Cost_Kg": 2.60, "Max_Include": 20.0},
-            {"المادة الخام": "مركز مستورد (Concentrate 5%)", "CP": 40.0, "ME_Kcal": 2100, "CF": 3.0, "EE": 2.0, "Cost_Kg": 5.80, "Max_Include": 5.0},
-            {"المادة الخام": "نخالة القمح (ردة)", "CP": 15.0, "ME_Kcal": 1300, "CF": 11.0, "EE": 4.0, "Cost_Kg": 0.95, "Max_Include": 25.0},
-            {"المادة الخام": "حجر جيري (Limestone)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Cost_Kg": 0.20, "Max_Include": 2.0},
-            {"المادة الخام": "مخلوط فيتامينات ومعادن (Premix)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Cost_Kg": 8.00, "Max_Include": 0.5}
+            {"المادة الخام": "ذرة رفيعة (فتريتة)", "CP": 9.0, "ME_Kcal": 3200, "CF": 2.5, "EE": 3.5, "Ca": 0.03, "AvP": 0.12, "Cost_Kg": 1.20, "Max_Include": 65.0},
+            {"المادة الخام": "ذرة صفراء مجروشة", "CP": 8.5, "ME_Kcal": 3350, "CF": 2.2, "EE": 3.8, "Ca": 0.02, "AvP": 0.10, "Cost_Kg": 1.35, "Max_Include": 60.0},
+            {"المادة الخام": "أمباز / كسبة زهرة الشمس (SSC)", "CP": 28.0, "ME_Kcal": 2200, "CF": 22.0, "EE": 6.0, "Ca": 0.35, "AvP": 0.20, "Cost_Kg": 1.75, "Max_Include": 25.0},
+            {"المادة الخام": "أمباز السوداني (Groundnut Cake)", "CP": 45.0, "ME_Kcal": 2500, "CF": 6.5, "EE": 7.0, "Ca": 0.20, "AvP": 0.18, "Cost_Kg": 2.60, "Max_Include": 20.0},
+            {"المادة الخام": "كسبة فول الصويا (44%)", "CP": 44.0, "ME_Kcal": 2230, "CF": 6.0, "EE": 1.5, "Ca": 0.29, "AvP": 0.22, "Cost_Kg": 3.10, "Max_Include": 30.0},
+            {"المادة الخام": "مركز بياض/تسمين مستورد (5%)", "CP": 40.0, "ME_Kcal": 2100, "CF": 3.0, "EE": 2.0, "Ca": 6.50, "AvP": 3.00, "Cost_Kg": 5.80, "Max_Include": 5.0},
+            {"المادة الخام": "نخالة القمح (ردة)", "CP": 15.0, "ME_Kcal": 1300, "CF": 11.0, "EE": 4.0, "Ca": 0.14, "AvP": 0.28, "Cost_Kg": 0.95, "Max_Include": 25.0},
+            {"المادة الخام": "مولاس القصب", "CP": 4.0, "ME_Kcal": 1900, "CF": 0.0, "EE": 0.1, "Ca": 0.80, "AvP": 0.08, "Cost_Kg": 0.70, "Max_Include": 5.0},
+            {"المادة الخام": "حجر جيري (Limestone)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 38.0, "AvP": 0.00, "Cost_Kg": 0.20, "Max_Include": 4.0},
+            {"المادة الخام": "ثنائي فوسفات الكالسيوم (DCP)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 22.0, "AvP": 18.0, "Cost_Kg": 2.20, "Max_Include": 2.0},
+            {"المادة الخام": "ملح الطعام (NaCl)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost_Kg": 0.30, "Max_Include": 0.5},
+            {"المادة الخام": "مخلوط فيتامينات ومعادن (Premix)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost_Kg": 8.00, "Max_Include": 0.5}
         ])
 
 
 # ==========================================
-# 3. محرك الوراثة والأنساب (Genetics Engine)
+# 3. محرك التخطيط الخطي المحمي (Optimization Engine)
 # ==========================================
-class GeneticSimulator:
-    def __init__(self, sire_data, dam_data, mating_system):
-        self.sire = sire_data
-        self.dam = dam_data
-        self.system = mating_system
-
-    def calculate_blood_fractions(self):
-        if "F1" in self.system:
-            return 50.0, 50.0
-        elif "Backcross to Sire" in self.system:
-            return 75.0, 25.0
-        elif "Backcross to Dam" in self.system:
-            return 25.0, 75.0
-        elif "F2" in self.system:
-            return 50.0, 50.0
-        return 50.0, 50.0
-
-    def estimate_performance(self):
-        s_frac, d_frac = [f / 100.0 for f in self.calculate_blood_fractions()]
-        
-        # قوة الهجين (Heterosis) تكون في أوجها في F1
-        heterosis_factor = 1.12 if "F1" in self.system else (1.05 if "F2" in self.system else 1.02)
-        
-        predicted_metrics = {}
-        for key in self.sire.keys():
-            if isinstance(self.sire[key], (int, float)) and key in self.dam:
-                base_val = (self.sire[key] * s_frac) + (self.dam[key] * d_frac)
-                if key != "heat_tol":  # عدم تضخيم تحمل الحرارة بقوة الهجين
-                    predicted_metrics[key] = round(base_val * heterosis_factor, 2)
-                else:
-                    predicted_metrics[key] = round(base_val, 2)
-                    
-        return predicted_metrics
-
-
-# ==========================================
-# 4. محرك التخطيط الخطي للتغذية (Optimization Engine)
-# ==========================================
-class FeedOptimizer:
-    def __init__(self, ingredients_df, target_cp, target_me):
+class AdvancedFeedOptimizer:
+    def __init__(self, ingredients_df, target_cp, target_me, target_cf_max, target_ca, target_avp):
         self.df = ingredients_df
         self.target_cp = target_cp
         self.target_me = target_me
+        self.target_cf_max = target_cf_max
+        self.target_ca = target_ca
+        self.target_avp = target_avp
 
     def optimize(self):
-        costs = self.df["Cost_Kg"].values
-        cp = self.df["CP"].values
-        me = self.df["ME_Kcal"].values
-        max_bounds = self.df["Max_Include"].values / 100.0
+        try:
+            costs = self.df["Cost_Kg"].values
+            cp = self.df["CP"].values
+            me = self.df["ME_Kcal"].values
+            cf = self.df["CF"].values
+            ca = self.df["Ca"].values
+            avp = self.df["AvP"].values
+            max_bounds = self.df["Max_Include"].values / 100.0
 
-        # قيد المجموع = 100% (1.0)
-        A_eq = [np.ones(len(costs))]
-        b_eq = [1.0]
+            A_eq = [np.ones(len(costs))]
+            b_eq = [1.0]
 
-        # قيود الحد الأدنى للبروتين والطاقة
-        A_ub = [
-            -cp,     # -CP <= -target_cp
-            -me      # -ME <= -target_me
-        ]
-        b_ub = [
-            -self.target_cp,
-            -self.target_me
-        ]
+            A_ub = [-cp, -me, cf, -ca, -avp]
+            b_ub = [-self.target_cp, -self.target_me, self.target_cf_max, -self.target_ca, -self.target_avp]
 
-        bounds = [(0, b) for b in max_bounds]
-
-        res = linprog(costs, A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
-        return res
+            bounds = [(0, b) for b in max_bounds]
+            return linprog(costs, A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
+        except Exception as e:
+            return None
 
 
 # ==========================================
-# 5. واجهة المستخدم (Streamlit Application UI)
+# 4. الهيدر الرئيسي وتوثيق التطبيق
 # ==========================================
+st.markdown("""
+    <div class="app-header">
+        <div class="app-title">منصة التغذية التطبيقية وتخطيط الأنساب للإنتاج الحيواني</div>
+        <div class="app-subtitle">تطوير وتصميم: أخصائي الإنتاج الحيواني | د. عبد القادر إسماعيل</div>
+    </div>
+""", unsafe_allow_html=True)
 
-# العنوان الرئيسي
-st.markdown('<h1 style="color:#1e3a8a;">🧬 المنصة المتكاملة للإنتاج الحيواني والتغذية التطبيقية</h1>', unsafe_allow_html=True)
-st.caption("تطبيق علمي هجين لإدارة تحسين الأنساب وصياغة العلائق الاقتصادية | د. عبد القادر إسماعيل")
-st.markdown("---")
 
-# القائمة الجانبية
-st.sidebar.image("https://cdn-icons-png.flaticon.com/512/3043/3043884.png", width=100)
-st.sidebar.title("لوحة التحكم والوحدات")
-app_mode = st.sidebar.selectbox("اختر الوحدة البرمجية:", [
-    "🧬 1. محاكي الوراثة وتحسين الأنساب",
-    "🌾 2. تركيب العلائق بأقل تكلفة (Least-Cost)",
-    "📊 3. تحليل إحلال عسبار عباد الشمس (Sunflower SSC)",
-    "📚 4. السجلات والدليل الفني"
+# ==========================================
+# 5. القائمة الجانبية (Sidebar)
+# ==========================================
+st.sidebar.markdown("### أقسام المنصة")
+app_mode = st.sidebar.radio("", [
+    "1. محاكي الأنساب والتنبوء الوراثي",
+    "2. تركيب العلائق بأقل تكلفة (Least-Cost)",
+    "3. دراسة إحلال كسبة زهرة الشمس",
+    "4. المراجع والمواصفات القياسية"
 ])
 
-# ------------------------------------------
-# الوحدة الأولى: الوراثة والأنساب
-# ------------------------------------------
-if app_mode == "🧬 1. محاكي الوراثة وتحسين الأنساب":
-    st.header("🧬 وحدة التنبؤ الوراثي وتحسين الأنساب")
-    st.write("تقوم هذه الوحدة بحساب القيمة التربوية المتوقعة ومستوى الأداء والمناعة للهجن الناتجة.")
+st.sidebar.markdown("---")
+st.sidebar.markdown("<div class='watermark'>الملكية الفكرية محفوظة ©<br><b>د. عبد القادر إسماعيل</b></div>", unsafe_allow_html=True)
 
-    col_category, col_system = st.columns(2)
-    
+
+# ==========================================
+# 6. التبويب الأول: التحسين الوراثي
+# ==========================================
+if "1." in app_mode:
+    st.subheader("محاكاة خلط الأنساب وحساب القيمة التربوية")
+    st.write("حساب نسب الدم المتوقعة ومستوى الأداء والمناعة للهجن الناتجة حسب نظام التزاوج المستهدف.")
+
+    col_cat, col_sys = st.columns(2)
     breeds_db = DatabaseEngine.get_livestock_breeds()
     
-    with col_category:
-        selected_species = st.selectbox("اختر القطاع الإنتاجي:", list(breeds_db.keys()))
-    
-    with col_system:
-        mating_sys = st.selectbox("نظام الخلط والتزاوج المستهدف:", [
+    with col_cat:
+        selected_species = st.selectbox("القطاع الإنتاجي:", list(breeds_db.keys()))
+    with col_sys:
+        mating_sys = st.selectbox("نظام التهجين المستهدف:", [
             "الجيل الأول (F1 Cross - 50%)",
-            "خلط رجعي للأب (Backcross to Sire - 75%)",
-            "خلط رجعي للأم (Backcross to Dam - 75%)",
+            "خلط رجعي للذكر (Backcross to Sire - 75%)",
+            "خلط رجعي للأنثى (Backcross to Dam - 75%)",
             "الجيل الثاني (F2 Generation)"
         ])
 
-    st.markdown("### 🧬 اختيار الآباء (Parents Selection)")
+    st.markdown("#### اختيار الآباء")
     col_sire, col_dam = st.columns(2)
-
     available_breeds = list(breeds_db[selected_species].keys())
 
     with col_sire:
-        sire_name = st.selectbox("♂️ اختيار سلالة الذكر (Sire):", available_breeds, index=3 if len(available_breeds)>3 else 0)
+        sire_name = st.selectbox("سلالة الذكر (Sire):", available_breeds, index=3 if len(available_breeds)>3 else 0)
         sire_data = breeds_db[selected_species][sire_name]
-        st.json(sire_data, expanded=False)
 
     with col_dam:
-        dam_name = st.selectbox("♀️ اختيار سلالة الأنثى (Dam):", available_breeds, index=0)
+        dam_name = st.selectbox("سلالة الأنثى (Dam):", available_breeds, index=1 if "البطانه" in available_breeds else 0)
         dam_data = breeds_db[selected_species][dam_name]
-        st.json(dam_data, expanded=False)
 
-    # تشغيل محاكي الوراثة
-    sim = GeneticSimulator(sire_data, dam_data, mating_sys)
-    s_frac, d_frac = sim.calculate_blood_fractions()
-    results = sim.estimate_performance()
+    if "F1" in mating_sys or "F2" in mating_sys:
+        s_frac, d_frac = 50.0, 50.0
+    elif "Sire" in mating_sys:
+        s_frac, d_frac = 75.0, 25.0
+    else:
+        s_frac, d_frac = 25.0, 75.0
 
     st.markdown("---")
-    st.subheader("📊 نتائج التنبؤ الوراثي للجيل الناتج")
-
-    m1, m2, m3, m4 = st.columns(4)
+    m1, m2, m3 = st.columns(3)
     m1.metric("نسبة دم الذكر", f"{s_frac}%", sire_name)
     m2.metric("نسبة دم الأنثى", f"{d_frac}%", dam_name)
-    m3.metric("مستوى تحمل البيئة والحرارة", f"{results.get('heat_tol', 'N/A')}%")
-    m4.metric("معامل قوة الهجين", "12%+" if "F1" in mating_sys else "5%+")
+    m3.metric("مستوى التكيف والتحمل البيئي", f"{int((sire_data.get('heat_tol', 50)*(s_frac/100)) + (dam_data.get('heat_tol', 50)*(d_frac/100)))}%")
 
-    # رسم بياني لمقارنة الصفات
-    st.subheader("📈 مقارنة أداء الهجين مع الأبوين")
-    
-    categories = [k for k in results.keys() if isinstance(results[k], (int, float))]
-    
+    categories = [k for k in sire_data.keys() if isinstance(sire_data[k], (int, float))]
     fig = go.Figure()
-    fig.add_trace(go.Scatterpolar(r=[sire_data.get(k, 0) for k in categories], theta=categories, fill='toself', name=f'الأب: {sire_name}'))
-    fig.add_trace(go.Scatterpolar(r=[dam_data.get(k, 0) for k in categories], theta=categories, fill='toself', name=f'الأم: {dam_name}'))
-    fig.add_trace(go.Scatterpolar(r=[results.get(k, 0) for k in categories], theta=categories, fill='toself', name='الجيل الناتج (Offspring)'))
-    
+    fig.add_trace(go.Scatterpolar(r=[sire_data.get(k, 0) for k in categories], theta=categories, fill='toself', name=f'الذكر: {sire_name}'))
+    fig.add_trace(go.Scatterpolar(r=[dam_data.get(k, 0) for k in categories], theta=categories, fill='toself', name=f'الأنثى: {dam_name}'))
     fig.update_layout(polar=dict(radialaxis=dict(visible=True)), showlegend=True)
     st.plotly_chart(fig, use_container_width=True)
 
-# ------------------------------------------
-# الوحدة الثانية: تركيب العلائق بأقل تكلفة
-# ------------------------------------------
-elif app_mode == "🌾 2. تركيب العلائق بأقل تكلفة (Least-Cost)":
-    st.header("🌾 وحدة البرمجة الخطية لتصنيع العلائق الاقتصادية")
-    st.write("حساب التركيبة المثالية مع الالتزام التام بالاحتياجات الغذائية والحدود القصوى لإدخال المواد الخام.")
 
-    col_req1, col_req2 = st.columns(2)
-    with col_req1:
-        req_cp = st.number_input("الحد الأدنى للبروتين الخام المطلوبة (CP %):", 10.0, 30.0, 18.0, step=0.5)
-    with col_req2:
-        req_me = st.number_input("الحد الأدنى للطاقة الممثلة (ME Kcal/Kg):", 1500, 3500, 2800, step=50)
+# ==========================================
+# 7. التبويب الثاني: تركيبة العليقة الموسعة
+# ==========================================
+elif "2." in app_mode:
+    st.subheader("صياغة العلائق الاقتصادية متوازنة العناصر (Least-Cost Optimization)")
+    st.write("أدخل الاحتياجات الغذائية المطلوبة، ويمكنك تعديل جدول الخامات والأسعار لحساب العليقة المثالية.")
 
-    st.markdown("### 📋 جدول المواد الخام المتاحة والتحليل الكيميائي")
-    feed_data = DatabaseEngine.get_feed_ingredients()
-    
-    edited_feed_df = st.data_editor(feed_data, num_rows="dynamic", use_container_width=True)
+    st.markdown("#### الاحتياجات الغذائية المستهدفة للتركيبة")
+    r1, r2, r3, r4, r5 = st.columns(5)
+    with r1:
+        req_cp = st.number_input("البروتين الخام (CP %):", 8.0, 30.0, 18.0, step=0.5)
+    with r2:
+        req_me = st.number_input("الطاقة (ME Kcal/Kg):", 1200, 3500, 2800, step=50)
+    with r3:
+        req_cf_max = st.number_input("الألياف القصوى (CF %):", 2.0, 25.0, 6.0, step=0.5)
+    with r4:
+        req_ca = st.number_input("الكالسيوم الأدنى (Ca %):", 0.0, 5.0, 1.0, step=0.1)
+    with r5:
+        req_avp = st.number_input("الفوسفور المتاح (Av.P %):", 0.0, 2.0, 0.45, step=0.05)
 
-    if st.button("🚀 تشغيل الخوارزمية وحساب العليقة المثالية", type="primary"):
-        optimizer = FeedOptimizer(edited_feed_df, req_cp, req_me)
+    st.markdown("#### جدول المواد الخام والتحليل الكيميائي الشامل")
+    feed_df = DatabaseEngine.get_expanded_feed_ingredients()
+    edited_df = st.data_editor(feed_df, num_rows="dynamic", use_container_width=True)
+
+    if st.button("🚀 حساب العليقة الاقتصادية المثالية", type="primary"):
+        optimizer = AdvancedFeedOptimizer(edited_df, req_cp, req_me, req_cf_max, req_ca, req_avp)
         res = optimizer.optimize()
 
-        if res.success:
-            st.success("✅ تم العثور على التركيبة الأقل تكلفة التي تلبي كافة الشروط الفنية!")
+        if res is not None and res.success:
+            st.success("✅ تم التوصل إلى التركيبة المثالية الحاصدة لأقل تكلفة بنجاح!")
             
-            solution_df = edited_feed_df[["المادة الخام", "Cost_Kg", "CP", "ME_Kcal"]].copy()
-            solution_df["النسبة في العليقة (%)"] = np.round(res.x * 100, 2)
-            solution_df["الوزن لكل طن (كجم)"] = np.round(res.x * 1000, 1)
-            solution_df["التكلفة المباشرة (لكل طن)"] = np.round(res.x * 1000 * solution_df["Cost_Kg"], 2)
+            sol_df = edited_df[["المادة الخام", "Cost_Kg", "CP", "ME_Kcal", "CF", "Ca", "AvP"]].copy()
+            sol_df["النسبة في العليقة (%)"] = np.round(res.x * 100, 2)
+            sol_df["الوزن للطن (كجم)"] = np.round(res.x * 1000, 1)
+            sol_df["تكلفة العنصر/طن"] = np.round(res.x * 1000 * sol_df["Cost_Kg"], 2)
 
-            col_table, col_summary = st.columns([2, 1])
-            with col_table:
-                st.dataframe(solution_df, use_container_width=True)
+            active_sol = sol_df[sol_df["النسبة في العليقة (%)"] > 0].reset_index(drop=True)
+
+            col_t, col_p = st.columns([2, 1])
+            with col_t:
+                st.dataframe(active_sol, use_container_width=True)
             
-            with col_summary:
+            with col_p:
                 total_cost_kg = res.fun
-                st.metric("التكلفة الإجمالية للكيلوجرام", f"${total_cost_kg:.3f}")
+                st.metric("تكلفة الكيلوجرام الصافي", f"${total_cost_kg:.3f}")
                 st.metric("التكلفة الإجمالية للطن", f"${total_cost_kg * 1000:.2f}")
                 
-                # رسم بياني لدائرة المكونات
-                fig_pie = px.pie(solution_df, values="النسبة في العليقة (%)", names="المادة الخام", title="توزيع المكونات في العليقة")
+                fig_pie = px.pie(active_sol, values="النسبة في العليقة (%)", names="المادة الخام", title="توزيع المكونات")
                 st.plotly_chart(fig_pie, use_container_width=True)
+                
+            st.markdown("#### التحليل الكيميائي المحسوب للعليقة الناتجة:")
+            calc_cp = np.sum(res.x * edited_df["CP"].values)
+            calc_me = np.sum(res.x * edited_df["ME_Kcal"].values)
+            calc_cf = np.sum(res.x * edited_df["CF"].values)
+            calc_ca = np.sum(res.x * edited_df["Ca"].values)
+            calc_avp = np.sum(res.x * edited_df["AvP"].values)
+
+            c1, c2, c3, c4, c5 = st.columns(5)
+            c1.metric("البروتين (CP)", f"{calc_cp:.2f}%")
+            c2.metric("الطاقة (ME)", f"{int(calc_me)} Kcal")
+            c3.metric("الألياف (CF)", f"{calc_cf:.2f}%")
+            c4.metric("الكالسيوم (Ca)", f"{calc_ca:.2f}%")
+            c5.metric("الفوسفور (Av.P)", f"{calc_avp:.2f}%")
+
         else:
-            st.error("❌ لم تنجح الخوارزمية في إيجاد حل ضمن هذه القيود. يرجى تخفيف قيود الطاقة أو رفع الحدود القصوى للمكونات.")
+            st.error("❌ لم يتم العثور على حل يطابق القيود المحددة. يُرجى رفع حد الألياف المسموح به أو تقليل نسبة الكالسيوم/الفوسفور المستهدفة.")
 
-# ------------------------------------------
-# الوحدة الثالثة: بحث إحلال عسبار عباد الشمس
-# ------------------------------------------
-elif app_mode == "📊 3. تحليل إحلال عسبار عباد الشمس (Sunflower SSC)":
-    st.header("📊 المحاكي التفاعلي لإحلال عسبار عباد الشمس المحلي (SSC)")
-    st.write("تقييم الأثر الاقتصادي والإنتاجي لاستبدال المركز المستورد والأنباز المحلي بعسبار زهرة الشمس.")
 
-    col_exp1, col_exp2 = st.columns(2)
-    with col_exp1:
-        ssc_replacement_rate = st.slider("نسبة الإحلال في العليقة (Sunflower Cake %):", 0, 30, 15, 1)
-        imported_conc_reduction = st.slider("نسبة تقليل المركز المستورد (%):", 0, 100, 50, 5)
+# ==========================================
+# 8. التبويب الثالث: تجربة أمباز/كسبة زهرة الشمس
+# ==========================================
+elif "3." in app_mode:
+    st.subheader("تقييم إحلال أمباز/كسبة زهرة الشمس (Sunflower Seed Cake)")
+    st.write("محاكاة الأثر الاقتصادي عند استبدال كسبة زهرة الشمس بالمكونات التقليدية المرتفعة السعر.")
 
-    with col_exp2:
-        flock_size = st.number_input("حجم القطيع / المزرعة (عدد الطيور أو الرؤوس):", 100, 100000, 5000)
-        daily_feed_per_head = st.number_input("معدل الاستهلاك اليومي (كجم/رأس أو طائر):", 0.05, 15.0, 0.110, step=0.01)
+    col_e1, col_e2 = st.columns(2)
+    with col_e1:
+        ssc_rate = st.slider("نسبة الإحلال في العليقة (%):", 0, 30, 15)
+        flock_size = st.number_input("حجم القطيع (عدد الرؤوس/الطيور):", 100, 100000, 5000)
+    with col_e2:
+        daily_feed = st.number_input("معدل الاستهلاك اليومي للرأس (كجم):", 0.05, 15.0, 0.110, step=0.01)
 
-    # حسابات الأثر الاقتصادي
-    daily_total_feed = flock_size * daily_feed_per_head  # كجم/يوم
-    monthly_feed_tons = (daily_total_feed * 30) / 1000  # طن/شهر
-    
-    # افتراض توفير 60 دولار في الطن عند استخدام 15% عسبار بدلاً من التركيزات المستوردة
-    saved_per_ton = ssc_replacement_rate * 3.8  
-    total_monthly_savings = monthly_feed_tons * saved_per_ton
+    monthly_tons = ((flock_size * daily_feed) * 30) / 1000
+    saved_per_ton = ssc_rate * 3.8
+    total_savings = monthly_tons * saved_per_ton
 
     st.markdown("---")
-    st.subheader("💡 نتائج المحاكاة المباشرة")
-
-    res_c1, res_c2, res_c3 = st.columns(3)
-    res_c1.metric("الاستهلاك الشهري للعلف", f"{monthly_feed_tons:.1f} طن")
-    res_c2.metric("التوفير التقديري لكل طن", f"${saved_per_ton:.2f}")
-    res_c3.metric("إجمالي التوفير الشهري", f"${total_monthly_savings:.2f}", delta="توفير عملة صعبة")
+    m_res1, m_res2, m_res3 = st.columns(3)
+    m_res1.metric("إجمالي استهلاك العلف الشهري", f"{monthly_tons:.1f} طن")
+    m_res2.metric("مقدار التوفير في سعر الطن", f"${saved_per_ton:.2f}")
+    m_res3.metric("إجمالي الوفر المالي الشهري", f"${total_savings:.2f}")
 
     st.markdown("""
-    <div class="custom-card">
-    <h4>📝 التوصية الفنية والتطبيقية:</h4>
-    <ul>
-        <li>أثبتت النتائج الميدانية أن استخدام عسبار زهرة الشمس حتى مستوى <b>15%</b> في علائق الدواجن (البياض والتسمين) لا يؤثر سلباً على معامل التحويل الغذائي (FCR).</li>
-        <li>ينصح بإضافة الأنزيمات الهاضمة للألياف (مثل Xylanase) عند زيادة النسبة عن 15% للسيطرة على معامل الألياف الخام (CF).</li>
-    </ul>
-    </div>
+        <div class="card-info">
+        <b>توصية خبير التغذية:</b> إحلال أمباز/كسبة زهرة الشمس حتى مستوى 15% في العلائق يمنح كفاءة تحويل غذائي ممتازة، ويحد من تكلفة الاستيراد، مع مراعاة موازنة الألياف باستخدام الإنزيمات الهاضمة في النسب الأعلى.
+        </div>
     """, unsafe_allow_html=True)
 
-# ------------------------------------------
-# الوحدة الرابعة: السجلات والدليل الفني
-# ------------------------------------------
+
+# ==========================================
+# 9. التبويب الرابع: الدليل الميداني
+# ==========================================
 else:
-    st.header("📚 الدليل الفني والسجلات الميدانية")
-    st.write("مرجع سريع للقيم الغذائية القياسية ومواصفات السلالات المحلية.")
+    st.subheader("الدليل الفني والمواصفات القياسية للإنتاج الحيواني")
+    
+    st.markdown("#### السلالات المحلية وتأقلمها (أبقار البطانه والكنانة)")
+    st.write("تمتاز أبقار البطانه والكنانة بالقدرة العالية على إنتاج الحليب تحت ظروف الحرارة المرتفعة والجفاف، وتعتبر حجر الزاوية في مشاريع التهجين والتحسين الوراثي في المنطقة.")
 
-    tab_ref1, tab_ref2 = st.tabs(["📋 الاحتياجات الغذائية القياسية", "🧬 الأطلس الميداني للسلالات"])
-
-    with tab_ref1:
-        st.subheader("جدول الاحتياجات الغذائية الدنيا حسب نوع الإنتاج")
-        st.table(pd.DataFrame({
-            "نوع القطاع": ["دجاج تسمين (بادئ)", "دجاج بياض (إنتاج ذروة)", "أبقار حليب (عالية الإنتاج)", "أغنام تسمين"],
-            "البروتين الخام (CP %)(الحد الأدنى)": ["22.0%", "17.5%", "16.5%", "14.0%"],
-            "الطاقة الممثلة (ME Kcal/kg)": ["3000", "2750", "2600", "2700"],
-            "الألياف القصوى (CF %)": ["3.5%", "5.0%", "16.0%", "12.0%"]
-        }))
-
-    with tab_ref2:
-        st.subheader("خصائص السلالات السودانية المحلية")
-        st.markdown("""
-        * **أبقار الكنانة والبتانة:** سلالات حليب محلية ممتازة، تمتاز بمقاومة عالية لقراد الأبقار والحرارة المرتفعة مع معدل إنتاج يصل إلى 15 لتر/يوم تحت الإدارة المحسنة.
-        * **الأغنام الحمرية والكباشية:** من أفضل سلالات اللحم في المنطقة، تمتاز بمعدلات نمو عالية وكفاءة ممتازة في تحويل العلائق الفقيرة.
-        * **دجاج الفيومي والبلدي:** يمتلك مناعة عالية جداً ضد الأمراض الفيروسية الشائعة مثل الماريك والنيوكاسل مقارنة بالسلالات التجارية.
-        """)
+    st.markdown("#### جدول الاحتياجات الغذائية القياسية للقطاعات المختلفة")
+    st.table(pd.DataFrame({
+        "القطاع الإنتاجي": ["دجاج تسمين (بادئ)", "دجاج بياض (ذروة)", "أبقار حليب (متوسطة)", "أغنام تسمين"],
+        "البروتين الخام (CP %)": ["22.0%", "17.5%", "16.5%", "14.0%"],
+        "الطاقة الممثلة (ME Kcal/kg)": ["3000", "2750", "2600", "2700"],
+        "الألياف القصوى (CF %)": ["3.5%", "5.0%", "15.0%", "12.0%"],
+        "الكالسيوم (Ca %)": ["1.0%", "3.8%", "0.7%", "0.6%"]
+    }))
