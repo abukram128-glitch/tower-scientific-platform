@@ -6,16 +6,16 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # ==========================================
-# 1. تهيئة الصفحة والأمان والحماية ضد النسخ والسرقة
+# 1. تهيئة الصفحة والأمان والحماية ضد النسخ
 # ==========================================
 st.set_page_config(
-    page_title="منصة التغذية التطبيقية والهندسة الوراثية - د. عبد القادر إسماعيل",
+    page_title="منتدى التغذية التطبيقية والهندسة الوراثية - د. عبد القادر إسماعيل",
     page_icon="🧬",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# تخصيص CSS وأكواد JavaScript لحماية التطبيق وتجميل الواجهة
+# تخصيص CSS منظم لتحسين الواجهة وجعلها سهلة الاستخدام
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
@@ -39,43 +39,45 @@ st.markdown("""
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
+    /* الهيدر الرئيسي للمنتدى */
     .app-header {
         background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
         color: #ffffff;
-        padding: 24px;
+        padding: 20px 24px;
         border-radius: 12px;
-        margin-bottom: 25px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        margin-bottom: 20px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
         border-right: 6px solid #0284C7;
     }
     
     .app-title {
-        font-size: 1.8rem;
+        font-size: 1.7rem;
         font-weight: 700;
         margin: 0;
         color: #F8FAFC;
     }
     
     .app-subtitle {
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         color: #38BDF8;
-        margin-top: 6px;
+        margin-top: 5px;
         font-weight: 600;
     }
     
+    /* بطاقات النتائج */
     .stMetric {
         background-color: #F8FAFC;
         border: 1px solid #E2E8F0;
-        padding: 16px;
+        padding: 12px;
         border-radius: 8px;
     }
     
     .card-info {
         background-color: #F1F5F9;
         border-right: 4px solid #0284C7;
-        padding: 16px;
+        padding: 14px;
         border-radius: 6px;
-        margin-top: 15px;
+        margin-top: 10px;
         color: #334155;
     }
     
@@ -152,7 +154,7 @@ class DatabaseEngine:
 
 
 # ==========================================
-# 3. محرك التخطيط الخطي المحمي (Optimization Engine)
+# 3. محرك التخطيط الخطي المحمي
 # ==========================================
 class AdvancedFeedOptimizer:
     def __init__(self, ingredients_df, target_cp, target_me, target_cf_max, target_ca, target_avp):
@@ -181,16 +183,16 @@ class AdvancedFeedOptimizer:
 
             bounds = [(0, b) for b in max_bounds]
             return linprog(costs, A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
-        except Exception as e:
+        except Exception:
             return None
 
 
 # ==========================================
-# 4. الهيدر الرئيسي وتوثيق التطبيق
+# 4. الهيدر الرئيسي وتوثيق المنتدى
 # ==========================================
 st.markdown("""
     <div class="app-header">
-        <div class="app-title">منصة التغذية التطبيقية وتخطيط الأنساب للإنتاج الحيواني</div>
+        <div class="app-title">منتدى التغذية التطبيقية وتخطيط الأنساب للإنتاج الحيواني</div>
         <div class="app-subtitle">تطوير وتصميم: أخصائي الإنتاج الحيواني | د. عبد القادر إسماعيل</div>
     </div>
 """, unsafe_allow_html=True)
@@ -199,9 +201,9 @@ st.markdown("""
 # ==========================================
 # 5. القائمة الجانبية (Sidebar)
 # ==========================================
-st.sidebar.markdown("### أقسام المنصة")
+st.sidebar.markdown("### أروقة المنتدى")
 app_mode = st.sidebar.radio("", [
-    "1. محاكي الأنساب والتنبوء الوراثي",
+    "1. محاكي الأنساب والتنبؤ الوراثي",
     "2. تركيب العلائق بأقل تكلفة (Least-Cost)",
     "3. دراسة إحلال كسبة زهرة الشمس",
     "4. المراجع والمواصفات القياسية"
@@ -215,8 +217,8 @@ st.sidebar.markdown("<div class='watermark'>الملكية الفكرية محف
 # 6. التبويب الأول: التحسين الوراثي
 # ==========================================
 if "1." in app_mode:
-    st.subheader("محاكاة خلط الأنساب وحساب القيمة التربوية")
-    st.write("حساب نسب الدم المتوقعة ومستوى الأداء والمناعة للهجن الناتجة حسب نظام التزاوج المستهدف.")
+    st.subheader("🧬 محاكاة خلط الأنساب وحساب القيمة التربوية")
+    st.write("اختر السلالات ونظام التهجين لحساب نسب الدم المتوقعة ومستوى التحمل البيئي.")
 
     col_cat, col_sys = st.columns(2)
     breeds_db = DatabaseEngine.get_livestock_breeds()
@@ -231,7 +233,7 @@ if "1." in app_mode:
             "الجيل الثاني (F2 Generation)"
         ])
 
-    st.markdown("#### اختيار الآباء")
+    st.markdown("#### ♂️ ♀️ اختيار الآباء")
     col_sire, col_dam = st.columns(2)
     available_breeds = list(breeds_db[selected_species].keys())
 
@@ -265,30 +267,34 @@ if "1." in app_mode:
 
 
 # ==========================================
-# 7. التبويب الثاني: تركيبة العليقة الموسعة
+# 7. التبويب الثاني: تركيب العلائق (منظم ومبسط)
 # ==========================================
 elif "2." in app_mode:
-    st.subheader("صياغة العلائق الاقتصادية متوازنة العناصر (Least-Cost Optimization)")
-    st.write("أدخل الاحتياجات الغذائية المطلوبة، ويمكنك تعديل جدول الخامات والأسعار لحساب العليقة المثالية.")
+    st.subheader("🌾 صياغة العلائق الاقتصادية متوازنة العناصر")
+    st.write("تم تنظيم هذا القسم في تبويبات مخصصة لتبسيط إدخال البيانات وحساب التركيبة المثالية بسهولة.")
 
-    st.markdown("#### الاحتياجات الغذائية المستهدفة للتركيبة")
-    r1, r2, r3, r4, r5 = st.columns(5)
-    with r1:
-        req_cp = st.number_input("البروتين الخام (CP %):", 8.0, 30.0, 18.0, step=0.5)
-    with r2:
-        req_me = st.number_input("الطاقة (ME Kcal/Kg):", 1200, 3500, 2800, step=50)
-    with r3:
-        req_cf_max = st.number_input("الألياف القصوى (CF %):", 2.0, 25.0, 6.0, step=0.5)
-    with r4:
-        req_ca = st.number_input("الكالسيوم الأدنى (Ca %):", 0.0, 5.0, 1.0, step=0.1)
-    with r5:
-        req_avp = st.number_input("الفوسفور المتاح (Av.P %):", 0.0, 2.0, 0.45, step=0.05)
+    # تقسيم الواجهة إلى تبويبات لسهولة الاستخدام
+    tab_req, tab_ingredients = st.tabs(["1️⃣ الاحتياجات الغذائية", "2️⃣ جدول المواد الخام والقيم"])
 
-    st.markdown("#### جدول المواد الخام والتحليل الكيميائي الشامل")
-    feed_df = DatabaseEngine.get_expanded_feed_ingredients()
-    edited_df = st.data_editor(feed_df, num_rows="dynamic", use_container_width=True)
+    with tab_req:
+        st.markdown("##### حدد الاحتياجات الكيميائية المستهدفة للتركيبة:")
+        r1, r2, r3 = st.columns(3)
+        with r1:
+            req_cp = st.number_input("البروتين الخام (CP %):", 8.0, 30.0, 18.0, step=0.5)
+            req_ca = st.number_input("الكالسيوم الأدنى (Ca %):", 0.0, 5.0, 1.0, step=0.1)
+        with r2:
+            req_me = st.number_input("الطاقة (ME Kcal/Kg):", 1200, 3500, 2800, step=50)
+            req_avp = st.number_input("الفوسفور المتاح (Av.P %):", 0.0, 2.0, 0.45, step=0.05)
+        with r3:
+            req_cf_max = st.number_input("الألياف القصوى (CF %):", 2.0, 25.0, 6.0, step=0.5)
 
-    if st.button("🚀 حساب العليقة الاقتصادية المثالية", type="primary"):
+    with tab_ingredients:
+        st.markdown("##### جدول المواد الخام المتاحة (يمكنك تعديل الأسعار والتحليل):")
+        feed_df = DatabaseEngine.get_expanded_feed_ingredients()
+        edited_df = st.data_editor(feed_df, num_rows="dynamic", use_container_width=True)
+
+    st.markdown("---")
+    if st.button("🚀 حساب العليقة الاقتصادية المثالية", type="primary", use_container_width=True):
         optimizer = AdvancedFeedOptimizer(edited_df, req_cp, req_me, req_cf_max, req_ca, req_avp)
         res = optimizer.optimize()
 
@@ -302,19 +308,22 @@ elif "2." in app_mode:
 
             active_sol = sol_df[sol_df["النسبة في العليقة (%)"] > 0].reset_index(drop=True)
 
-            col_t, col_p = st.columns([2, 1])
+            # عرض التكلفة أولاً
+            total_cost_kg = res.fun
+            c_cost1, c_cost2 = st.columns(2)
+            c_cost1.metric("تكلفة الكيلوجرام الصافي", f"${total_cost_kg:.3f}")
+            c_cost2.metric("التكلفة الإجمالية للطن", f"${total_cost_kg * 1000:.2f}")
+
+            col_t, col_p = st.columns([1.8, 1.2])
             with col_t:
+                st.markdown("##### 📋 المكونات المحسوبة في العليقة:")
                 st.dataframe(active_sol, use_container_width=True)
             
             with col_p:
-                total_cost_kg = res.fun
-                st.metric("تكلفة الكيلوجرام الصافي", f"${total_cost_kg:.3f}")
-                st.metric("التكلفة الإجمالية للطن", f"${total_cost_kg * 1000:.2f}")
-                
-                fig_pie = px.pie(active_sol, values="النسبة في العليقة (%)", names="المادة الخام", title="توزيع المكونات")
+                fig_pie = px.pie(active_sol, values="النسبة في العليقة (%)", names="المادة الخام", title="توزيع مكونات العليقة")
                 st.plotly_chart(fig_pie, use_container_width=True)
                 
-            st.markdown("#### التحليل الكيميائي المحسوب للعليقة الناتجة:")
+            st.markdown("##### 🧪 التحليل الكيميائي المحسوب للعليقة الناتجة:")
             calc_cp = np.sum(res.x * edited_df["CP"].values)
             calc_me = np.sum(res.x * edited_df["ME_Kcal"].values)
             calc_cf = np.sum(res.x * edited_df["CF"].values)
@@ -336,7 +345,7 @@ elif "2." in app_mode:
 # 8. التبويب الثالث: تجربة أمباز/كسبة زهرة الشمس
 # ==========================================
 elif "3." in app_mode:
-    st.subheader("تقييم إحلال أمباز/كسبة زهرة الشمس (Sunflower Seed Cake)")
+    st.subheader("📊 تقييم إحلال أمباز/كسبة زهرة الشمس (Sunflower Seed Cake)")
     st.write("محاكاة الأثر الاقتصادي عند استبدال كسبة زهرة الشمس بالمكونات التقليدية المرتفعة السعر.")
 
     col_e1, col_e2 = st.columns(2)
@@ -367,7 +376,7 @@ elif "3." in app_mode:
 # 9. التبويب الرابع: الدليل الميداني
 # ==========================================
 else:
-    st.subheader("الدليل الفني والمواصفات القياسية للإنتاج الحيواني")
+    st.subheader("📚 الدليل الفني والمواصفات القياسية للإنتاج الحيواني")
     
     st.markdown("#### السلالات المحلية وتأقلمها (أبقار البطانه والكنانة)")
     st.write("تمتاز أبقار البطانه والكنانة بالقدرة العالية على إنتاج الحليب تحت ظروف الحرارة المرتفعة والجفاف، وتعتبر حجر الزاوية في مشاريع التهجين والتحسين الوراثي في المنطقة.")
