@@ -1,5 +1,1 @@
-streamlit==1.35.0
-pandas==2.1.4
-numpy==1.26.3
-scipy==1.12.0
-plotly==5.18.0
+pip install streamlit pandas numpy
