@@ -97,33 +97,27 @@ st.markdown("""
 
 
 # ==========================================
-# 2. محرك الحسابات الوراثية المحسن والمحمي
+# 2. محرك الحسابات الوراثية وتتبع الأجيال (Multi-Generational Engine)
 # ==========================================
 class GeneticsEngine:
-    """محرك تطبيقي لحساب الطرز الوراثية والمظهرية واستجابة الانتخاب"""
     
     @staticmethod
     def calculate_punnett_square(sire_genotype, dam_genotype, gene_info):
-        """حساب مربعات بانيت والطرز المظهرية مع حماية كاملة من الأخطاء"""
+        """حساب مربعات بانيت والطرز المظهرية بنماذج علمية دقيقة"""
         sire_alleles = [sire_genotype[0], sire_genotype[1]]
         dam_alleles = [dam_genotype[0], dam_genotype[1]]
         
         offspring_genotypes = []
         for s in sire_alleles:
             for d in dam_alleles:
-                # ترتيب الأليل السائد (الكبير) أولاً
                 sorted_alleles = "".join(sorted([s, d], key=lambda x: (x.islower(), x)))
                 offspring_genotypes.append(sorted_alleles)
                 
-        # حساب النسب المئوية للطرز الجينية
         genotype_counts = pd.Series(offspring_genotypes).value_counts(normalize=True) * 100
         
-        # تحديد الطراز المظهري مع تفادي خطأ UnboundLocalError
         phenotype_results = {}
         for geno, prob in genotype_counts.items():
-            # تعيين قيمة افتراضية صريحة
             pheno = gene_info["dominant_trait"]
-            
             if gene_info["inheritance"] == "Complete":
                 if gene_info["dominant_allele"] in geno:
                     pheno = gene_info["dominant_trait"]
@@ -142,33 +136,67 @@ class GeneticsEngine:
         return genotype_counts.to_dict(), phenotype_results, offspring_genotypes
 
     @staticmethod
-    def calculate_breeding_value(heritability, individual_perf, population_avg):
-        """حساب القيمة التربوية المتوقعة: EBV = h^2 * (P - P_bar)"""
-        ebv = heritability * (individual_perf - population_avg)
-        expected_offspring_gain = ebv / 2.0
-        return ebv, expected_offspring_gain
+    def simulate_multi_generations(initial_mean, heritability, selection_intensity, phenotype_std, generations=5):
+        """تتبع التحسين الوراثي التراكمي عبر الأجيال F1 إلى Fn"""
+        gen_data = []
+        current_mean = initial_mean
+        
+        # التغير الوراثي لكل جيل: Delta G = i * h^2 * sigma_p
+        annual_gain = selection_intensity * heritability * phenotype_std
+        
+        for g in range(1, generations + 1):
+            ebv_gen = annual_gain * g
+            expected_mean = initial_mean + ebv_gen
+            gen_data.append({
+                "الجيل": f"الجيل F{g}",
+                "التحسين المتراكم (ΔG)": round(ebv_gen, 2),
+                "متوسط أداء الجيل المتوقع": round(expected_mean, 2)
+            })
+            
+        return pd.DataFrame(gen_data)
 
 
 # ==========================================
-# 3. قواعد بيانات العليقة والاقتصاد
+# 3. توسيع قاعدة بيانات المواد الخام والسلالات
 # ==========================================
 class DatabaseEngine:
     @staticmethod
     def get_expanded_feed_ingredients():
+        """مكتبة موسعة للمواد الخام للعلائق"""
         return pd.DataFrame([
             {"المادة الخام": "ذرة رفيعة (فتريتة)", "CP": 9.0, "ME_Kcal": 3200, "CF": 2.5, "EE": 3.5, "Ca": 0.03, "AvP": 0.12, "Cost_Kg": 1.20, "Max_Include": 65.0},
             {"المادة الخام": "ذرة صفراء مجروشة", "CP": 8.5, "ME_Kcal": 3350, "CF": 2.2, "EE": 3.8, "Ca": 0.02, "AvP": 0.10, "Cost_Kg": 1.35, "Max_Include": 60.0},
-            {"المادة الخام": "أمباز / كسبة زهرة الشمس (SSC)", "CP": 28.0, "ME_Kcal": 2200, "CF": 22.0, "EE": 6.0, "Ca": 0.35, "AvP": 0.20, "Cost_Kg": 1.75, "Max_Include": 25.0},
+            {"المادة الخام": "أمباز / كسبة زهرة الشمس (SSC - عالي الألياف)", "CP": 28.0, "ME_Kcal": 2100, "CF": 24.0, "EE": 5.5, "Ca": 0.35, "AvP": 0.20, "Cost_Kg": 1.60, "Max_Include": 20.0},
+            {"المادة الخام": "أمباز / كسبة زهرة الشمس مقشورة (SSC - منخفض الألياف)", "CP": 36.0, "ME_Kcal": 2450, "CF": 12.0, "EE": 6.5, "Ca": 0.30, "AvP": 0.22, "Cost_Kg": 2.10, "Max_Include": 25.0},
             {"المادة الخام": "أمباز السوداني (Groundnut Cake)", "CP": 45.0, "ME_Kcal": 2500, "CF": 6.5, "EE": 7.0, "Ca": 0.20, "AvP": 0.18, "Cost_Kg": 2.60, "Max_Include": 20.0},
+            {"المادة الخام": "أمباز السمسم (Sesame Cake)", "CP": 40.0, "ME_Kcal": 2600, "CF": 6.0, "EE": 10.0, "Ca": 2.10, "AvP": 0.55, "Cost_Kg": 2.80, "Max_Include": 15.0},
+            {"المادة الخام": "كسبة بذرة القطن (Cottonseed Meal)", "CP": 38.0, "ME_Kcal": 2000, "CF": 11.0, "EE": 4.0, "Ca": 0.20, "AvP": 0.25, "Cost_Kg": 2.20, "Max_Include": 10.0},
             {"المادة الخام": "كسبة فول الصويا (44%)", "CP": 44.0, "ME_Kcal": 2230, "CF": 6.0, "EE": 1.5, "Ca": 0.29, "AvP": 0.22, "Cost_Kg": 3.10, "Max_Include": 30.0},
+            {"المادة الخام": "كسبة فول الصويا (48%)", "CP": 48.0, "ME_Kcal": 2440, "CF": 3.5, "EE": 1.0, "Ca": 0.27, "AvP": 0.20, "Cost_Kg": 3.40, "Max_Include": 30.0},
             {"المادة الخام": "مركز بياض/تسمين مستورد (5%)", "CP": 40.0, "ME_Kcal": 2100, "CF": 3.0, "EE": 2.0, "Ca": 6.50, "AvP": 3.00, "Cost_Kg": 5.80, "Max_Include": 5.0},
             {"المادة الخام": "نخالة القمح (ردة)", "CP": 15.0, "ME_Kcal": 1300, "CF": 11.0, "EE": 4.0, "Ca": 0.14, "AvP": 0.28, "Cost_Kg": 0.95, "Max_Include": 25.0},
             {"المادة الخام": "مولاس القصب", "CP": 4.0, "ME_Kcal": 1900, "CF": 0.0, "EE": 0.1, "Ca": 0.80, "AvP": 0.08, "Cost_Kg": 0.70, "Max_Include": 5.0},
             {"المادة الخام": "حجر جيري (Limestone)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 38.0, "AvP": 0.00, "Cost_Kg": 0.20, "Max_Include": 4.0},
             {"المادة الخام": "ثنائي فوسفات الكالسيوم (DCP)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 22.0, "AvP": 18.0, "Cost_Kg": 2.20, "Max_Include": 2.0},
+            {"المادة الخام": "DL-Methionine (مثيونين نقي)", "CP": 58.0, "ME_Kcal": 5000, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost_Kg": 12.00, "Max_Include": 0.3},
+            {"المادة الخام": "L-Lysine HCl (لايسين نقي)", "CP": 94.0, "ME_Kcal": 4100, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost_Kg": 9.50, "Max_Include": 0.4},
             {"المادة الخام": "ملح الطعام (NaCl)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost_Kg": 0.30, "Max_Include": 0.5},
             {"المادة الخام": "مخلوط فيتامينات ومعادن (Premix)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost_Kg": 8.00, "Max_Include": 0.5}
         ])
+
+    @staticmethod
+    def get_breed_database():
+        """مكتبة السلالات ومواصفاتها الوراثية والإنتاجية"""
+        return {
+            "أبقار - هولشتاين (Holstein-Friesian)": {"type": "Cattle", "avg_milk": 7500, "fat_pct": 3.7, "h2_milk": 0.30, "h2_fat": 0.50},
+            "أبقار - جيرسي (Jersey)": {"type": "Cattle", "avg_milk": 5000, "fat_pct": 4.8, "h2_milk": 0.28, "h2_fat": 0.52},
+            "أبقار - سيمنتال (Simmental)": {"type": "Cattle", "avg_milk": 5500, "fat_pct": 4.0, "h2_milk": 0.32, "h2_fat": 0.48},
+            "أبقار - سودانية محلية (Kena / Kenana)": {"type": "Cattle", "avg_milk": 1800, "fat_pct": 4.5, "h2_milk": 0.22, "h2_fat": 0.45},
+            "دواجن - Cobb 500 (تسمين)": {"type": "Poultry", "avg_weight_35d": 2.4, "fcr": 1.52, "h2_weight": 0.40},
+            "دواجن - Ross 308 (تسمين)": {"type": "Poultry", "avg_weight_35d": 2.38, "fcr": 1.54, "h2_weight": 0.38},
+            "دواجن - Hy-Line W-36 (بياض)": {"type": "Poultry", "avg_eggs": 320, "egg_weight": 62.0, "h2_eggs": 0.20},
+            "أغنام - العواسي / الحمري (Awassi)": {"type": "Sheep", "avg_milk": 280, "weaning_weight": 24, "h2_weight": 0.35}
+        }
 
 
 # ==========================================
@@ -217,10 +245,10 @@ st.markdown("""
 
 st.sidebar.markdown("### أروقة المنتدى")
 app_mode = st.sidebar.radio("", [
-    "1. الحسابات الوراثية وقوانين الأنساب (Applied Genetics)",
-    "2. تركيب العلائق بأقل تكلفة (Least-Cost)",
+    "1. الحسابات الوراثية وتتبع الأجيال (Multi-Generational Breeding)",
+    "2. تركيب العلائق بأقل تكلفة (Expanded Least-Cost)",
     "3. دراسة إحلال كسبة زهرة الشمس",
-    "4. المراجع والمواصفات القياسية"
+    "4. دليل السلالات والمواصفات القياسية"
 ])
 
 st.sidebar.markdown("---")
@@ -228,18 +256,20 @@ st.sidebar.markdown("<div class='watermark'>الملكية الفكرية محف
 
 
 # ==========================================
-# 6. القسم الأول: التطبيق الوراثي الحقيقي
+# 6. القسم الأول: التطبيق الوراثي وتتبع الأجيال
 # ==========================================
 if "1." in app_mode:
-    st.subheader("🧬 التطبيق الوراثي وحسابات التنبؤ الدقيق (Genetic Execution Engine)")
-    st.write("تطبيق المعادلات العلمية للسيادة الجينية، الطرز المظهرية والوراثية، والقيمة التربوية للماشية والدواجن.")
+    st.subheader("🧬 التطبيق الوراثي وحساب التطور عبر الأجيال (Multi-Generational Engine)")
+    
+    tab_gen1, tab_gen2, tab_gen3 = st.tabs([
+        "📊 وراثة صفات السيادة (Mendelian)", 
+        "📈 القيمة التربوية (EBV)", 
+        "🔄 تتبع التحسين عبر الأجيال (F1 - Fn)"
+    ])
 
-    tab_gen1, tab_gen2 = st.tabs(["📊 التنبؤ بالطراز الجيني والمظهري (Mendelian)", "📈 المكافئ الوراثي والقيمة التربوية (EBV)"])
-
-    # --- التبويب الأول: وراثة الصفات الوصفية والسيادة ---
+    # --- التبويب الأول: السيادة ومربع بانيت ---
     with tab_gen1:
         st.markdown("##### 1. تحديد الصفة الوراثية ونوع السيادة:")
-        
         col_gene, col_inheritance = st.columns(2)
         with col_gene:
             gene_choice = st.selectbox("الصفة المراد دراستها:", [
@@ -255,7 +285,6 @@ if "1." in app_mode:
                 "سيادة غير تامة / غير كاملة (Incomplete Dominance)"
             ])
 
-        # ضبط شروط الرموز الوراثية
         inh_mode = "Complete" if "تامة" in inheritance_type and "غير" not in inheritance_type else "Incomplete"
 
         if "Polled" in gene_choice:
@@ -283,19 +312,16 @@ if "1." in app_mode:
             dam_geno_input = st.selectbox("الطراز الوراثي للأنثى (Dam):", options_sire_dam, index=1)
             dam_code = dam_geno_input.split(" ")[0]
 
-        # إجراء الحساب الوراثي الآمن
         geno_prob, pheno_prob, raw_offspring = GeneticsEngine.calculate_punnett_square(sire_code, dam_code, g_info)
 
         st.markdown("---")
         st.markdown("### 📋 النتائج العلمية للجيل الناتج (F1 Generation Output)")
-
         col_res_g, col_res_p = st.columns(2)
         
         with col_res_g:
             st.markdown("###### **نسب الطرز الوراثية المتوقعة (Genotypic Ratios):**")
             for g_code, prob in geno_prob.items():
                 st.write(f"- **{g_code}**: بنسبة `{prob:.1f}%` ({'سائد نقي' if g_code==dom*2 else ('متنحي نقي' if g_code==rec*2 else 'هجين')})")
-            
             fig_g = px.bar(x=list(geno_prob.keys()), y=list(geno_prob.values()), labels={'x':'الطراز الجيني', 'y':'الاحتمالية %'}, title="توزيع الطراز الجيني")
             st.plotly_chart(fig_g, use_container_width=True)
 
@@ -303,51 +329,92 @@ if "1." in app_mode:
             st.markdown("###### **نسب الطرز المظهرية المتوقعة (Phenotypic Ratios):**")
             for p_name, prob in pheno_prob.items():
                 st.write(f"- **{p_name}**: بنسبة `{prob:.1f}%` احتمال ظهور")
-            
             fig_p = px.pie(values=list(pheno_prob.values()), names=list(pheno_prob.keys()), title="توزيع الطراز المظهري الناتج")
             st.plotly_chart(fig_p, use_container_width=True)
 
     # --- التبويب الثاني: القيمة التربوية ---
     with tab_gen2:
         st.markdown("##### حساب القيمة التربوية المتوقعة (Estimated Breeding Value - EBV)")
-        st.write("تعتمد الحسابات على المعادلة العلمية: $EBV = h^2 \\times (P - \\bar{P})$")
-
+        breeds_db = DatabaseEngine.get_breed_database()
+        
+        selected_breed_name = st.selectbox("اختر السلالة المراد تقييمها:", list(breeds_db.keys()))
+        breed_data = breeds_db[selected_breed_name]
+        
         col_h1, col_h2, col_h3 = st.columns(3)
         with col_h1:
-            trait_selected = st.selectbox("الصفة الكمية:", ["إنتاج الحليب (كجم/موسم)", "وزن الفطام (كجم)", "نسبة الدهن (%)"])
-            default_h2 = 0.30 if "الحليب" in trait_selected else (0.40 if "وزن" in trait_selected else 0.50)
+            if breed_data["type"] == "Cattle":
+                pop_avg_default = float(breed_data["avg_milk"])
+                label_text = "إنتاج الحليب (كجم/موسم)"
+                h2_default = breed_data["h2_milk"]
+            elif breed_data["type"] == "Poultry":
+                pop_avg_default = float(breed_data.get("avg_weight_35d", breed_data.get("avg_eggs", 2.0)))
+                label_text = "الوزن/عدد البيض"
+                h2_default = breed_data.get("h2_weight", breed_data.get("h2_eggs", 0.3))
+            else:
+                pop_avg_default = float(breed_data["avg_milk"])
+                label_text = "الإنتاجية العامة"
+                h2_default = 0.30
+
+            st.text_input("الصفة المقاسة:", label_text, disabled=True)
         
         with col_h2:
-            h2_val = st.number_input("المكافئ الوراثي للصفة ($h^2$):", 0.05, 0.99, default_h2, step=0.05)
+            h2_val = st.number_input("المكافئ الوراثي ($h^2$):", 0.05, 0.99, h2_default, step=0.05)
         
         with col_h3:
-            pop_avg = st.number_input("متوسط القطيع (Population Mean $\\bar{P}$):", 1.0, 15000.0, 2500.0 if "الحليب" in trait_selected else 22.0)
+            pop_avg = st.number_input("متوسط السلالة/القطيع ($\\bar{P}$):", 0.1, 20000.0, pop_avg_default)
 
-        ind_perf = st.number_input("أداء الفرد المراد انتخابه (Individual Performance $P$):", 1.0, 20000.0, 3200.0 if "الحليب" in trait_selected else 28.0)
+        ind_perf = st.number_input("أداء الفرد المنتخب ($P$):", 0.1, 25000.0, pop_avg_default * 1.2)
 
-        ebv, offspring_gain = GeneticsEngine.calculate_breeding_value(h2_val, ind_perf, pop_avg)
+        ebv = h2_val * (ind_perf - pop_avg)
+        offspring_gain = ebv / 2.0
 
         st.markdown("---")
         res1, res2, res3 = st.columns(3)
         res1.metric("الفارق الظاهري (Selection Differential)", f"{ind_perf - pop_avg:+.2f}")
         res2.metric("القيمة التربوية للفرد (EBV)", f"{ebv:+.2f}")
-        res3.metric("التحسين المتوقع في الأبناء (Offspring Gain)", f"{offspring_gain:+.2f}")
+        res3.metric("التحسين المتوقع في الأبناء", f"{offspring_gain:+.2f}")
 
-        st.markdown(f"""
-            <div class='genetic-card'>
-            <b>التفسير العلمي:</b> استخدام هذا الفرد كأب/أم سيعطي تحسناً وراثياً متوقعاً لمجموعته الناتجة بمقدار <b>{offspring_gain:+.2f}</b> نقطة عن متوسط القطيع الحالي، بفضل المكافئ الوراثي المحسوب ($h^2 = {h2_val}$).
-            </div>
-        """, unsafe_allow_html=True)
+    # --- التبويب الثالث: تتبع الأجيال F1 - Fn ---
+    with tab_gen3:
+        st.markdown("##### 🧬 حساب التطور والتحسين الوراثي عبر الأجيال المتقدمة")
+        st.write("حساب الاستجابة للانتخاب المتكرر باستخدام خوارزمية: $\\Delta G = i \\cdot h^2 \\cdot \\sigma_p$")
+
+        c_g1, c_g2, c_g3, c_g4 = st.columns(4)
+        with c_g1:
+            base_perf = st.number_input("متوسط جيل الأساس ($P_0$):", 1.0, 15000.0, 3000.0)
+        with c_g2:
+            h2_gen = st.number_input("المكافئ الوراثي ($h^2$):", 0.05, 0.95, 0.30)
+        with c_g3:
+            intensity_i = st.slider("شدة الانتخاب ($i$ - Selection Intensity):", 0.5, 2.5, 1.4)
+        with c_g4:
+            sigma_p = st.number_input("الانحراف المعياري للصفة ($\\sigma_p$):", 1.0, 2000.0, 300.0)
+
+        num_generations = st.slider("عدد الأجيال المراد حسابها:", 2, 10, 5)
+
+        df_gen_res = GeneticsEngine.simulate_multi_generations(base_perf, h2_gen, intensity_i, sigma_p, num_generations)
+
+        st.markdown("---")
+        col_gt, col_gp = st.columns([1.2, 1.8])
+        with col_gt:
+            st.markdown("###### **جدول التراكم الوراثي للأجيال:**")
+            st.dataframe(df_gen_res, use_container_width=True)
+
+        with col_gp:
+            fig_gen = px.line(df_gen_res, x="الجيل", y="متوسط أداء الجيل المتوقع", markers=True, 
+                              title="مسار التحسين الوراثي عبر الأجيال (Genetic Gain Line)",
+                              text="متوسط أداء الجيل المتوقع")
+            fig_gen.update_traces(textposition="top center")
+            st.plotly_chart(fig_gen, use_container_width=True)
 
 
 # ==========================================
-# 7. التبويب الثاني: تركيب العلائق بأقل تكلفة
+# 7. القسم الثاني: تركيب العلائق بأقل تكلفة
 # ==========================================
 elif "2." in app_mode:
-    st.subheader("🌾 صياغة العلائق الاقتصادية متوازنة العناصر")
-    st.write("حساب العليقة المثالية بأقل تكلفة المالية باستخدام الخوارزمية الخطية.")
+    st.subheader("🌾 صياغة العلائق الاقتصادية الموسعة متوازنة العناصر")
+    st.write("مكتبة موسعة تحوي أكثر من 18 عنصر علف محلي ومستورد لحساب التركيبة المثالية بالأحماض الأمينية والطاقة.")
 
-    tab_req, tab_ingredients = st.tabs(["1️⃣ الاحتياجات الغذائية", "2️⃣ جدول المواد الخام والقيم"])
+    tab_req, tab_ingredients = st.tabs(["1️⃣ الاحتياجات الغذائية", "2️⃣ مكتبة مواد العلف الموسعة"])
 
     with tab_req:
         st.markdown("##### حدد الاحتياجات الكيميائية المستهدفة للتركيبة:")
@@ -362,7 +429,7 @@ elif "2." in app_mode:
             req_cf_max = st.number_input("الألياف القصوى (CF %):", 2.0, 25.0, 6.0, step=0.5)
 
     with tab_ingredients:
-        st.markdown("##### جدول المواد الخام المتاحة:")
+        st.markdown("##### جدول المواد الخام المتاحة (يمكنك تعديل الأسعار أو نسب الإدخال):")
         feed_df = DatabaseEngine.get_expanded_feed_ingredients()
         edited_df = st.data_editor(feed_df, num_rows="dynamic", use_container_width=True)
 
@@ -372,7 +439,7 @@ elif "2." in app_mode:
         res = optimizer.optimize()
 
         if res is not None and res.success:
-            st.success("✅ تم التوصل إلى التركيبة المثالية الحاصدة لأقل تكلفة بنجاح!")
+            st.success("✅ تم التوصل إلى التركيبة المثالية بأقل تكلفة بنجاح!")
             
             sol_df = edited_df[["المادة الخام", "Cost_Kg", "CP", "ME_Kcal", "CF", "Ca", "AvP"]].copy()
             sol_df["النسبة في العليقة (%)"] = np.round(res.x * 100, 2)
@@ -396,7 +463,7 @@ elif "2." in app_mode:
                 st.plotly_chart(fig_pie, use_container_width=True)
 
         else:
-            st.error("❌ لم يتم العثور على حل يطابق القيود المحددة. يُرجى تعديل النسب المطلوبة.")
+            st.error("❌ لم يتم العثور على حل يطابق القيود المحددة. يُرجى تعديل النسب المطلوبة أو فتح قيود الألياف.")
 
 
 # ==========================================
@@ -425,14 +492,11 @@ elif "3." in app_mode:
 
 
 # ==========================================
-# 9. التبويب الرابع: الدليل الميداني
+# 9. التبويب الرابع: الدليل الفني والسلالات
 # ==========================================
 else:
-    st.subheader("📚 الدليل الفني والمواصفات القياسية للإنتاج الحيواني")
-    st.table(pd.DataFrame({
-        "القطاع الإنتاجي": ["دجاج تسمين (بادئ)", "دجاج بياض (ذروة)", "أبقار حليب (متوسطة)", "أغنام تسمين"],
-        "البروتين الخام (CP %)": ["22.0%", "17.5%", "16.5%", "14.0%"],
-        "الطاقة الممثلة (ME Kcal/kg)": ["3000", "2750", "2600", "2700"],
-        "الألياف القصوى (CF %)": ["3.5%", "5.0%", "15.0%", "12.0%"],
-        "الكالسيوم (Ca %)": ["1.0%", "3.8%", "0.7%", "0.6%"]
-    }))
+    st.subheader("📚 دائم السلالات والمواصفات القياسية للإنتاج الحيواني")
+    st.write("بيانات ومعايير الأداء المعتمدة للسلالات ومقارنة إنتاجيتها:")
+    
+    breeds_data = DatabaseEngine.get_breed_database()
+    st.json(breeds_data)
