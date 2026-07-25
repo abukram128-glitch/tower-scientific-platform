@@ -97,13 +97,12 @@ st.markdown("""
 
 
 # ==========================================
-# 2. محرك الحسابات الوراثية وتتبع الأجيال (Multi-Generational Engine)
+# 2. محرك الحسابات الوراثية وتتبع الأجيال
 # ==========================================
 class GeneticsEngine:
     
     @staticmethod
     def calculate_punnett_square(sire_genotype, dam_genotype, gene_info):
-        """حساب مربعات بانيت والطرز المظهرية بنماذج علمية دقيقة"""
         sire_alleles = [sire_genotype[0], sire_genotype[1]]
         dam_alleles = [dam_genotype[0], dam_genotype[1]]
         
@@ -137,11 +136,7 @@ class GeneticsEngine:
 
     @staticmethod
     def simulate_multi_generations(initial_mean, heritability, selection_intensity, phenotype_std, generations=5):
-        """تتبع التحسين الوراثي التراكمي عبر الأجيال F1 إلى Fn"""
         gen_data = []
-        current_mean = initial_mean
-        
-        # التغير الوراثي لكل جيل: Delta G = i * h^2 * sigma_p
         annual_gain = selection_intensity * heritability * phenotype_std
         
         for g in range(1, generations + 1):
@@ -157,36 +152,35 @@ class GeneticsEngine:
 
 
 # ==========================================
-# 3. توسيع قاعدة بيانات المواد الخام والسلالات
+# 3. قواعد البيانات
 # ==========================================
 class DatabaseEngine:
     @staticmethod
     def get_expanded_feed_ingredients():
-        """مكتبة موسعة للمواد الخام للعلائق"""
+        """مكتبة المواد الخام مع عمود التحديد الصريح للاختيار"""
         return pd.DataFrame([
-            {"المادة الخام": "ذرة رفيعة (فتريتة)", "CP": 9.0, "ME_Kcal": 3200, "CF": 2.5, "EE": 3.5, "Ca": 0.03, "AvP": 0.12, "Cost_Kg": 1.20, "Max_Include": 65.0},
-            {"المادة الخام": "ذرة صفراء مجروشة", "CP": 8.5, "ME_Kcal": 3350, "CF": 2.2, "EE": 3.8, "Ca": 0.02, "AvP": 0.10, "Cost_Kg": 1.35, "Max_Include": 60.0},
-            {"المادة الخام": "أمباز / كسبة زهرة الشمس (SSC - عالي الألياف)", "CP": 28.0, "ME_Kcal": 2100, "CF": 24.0, "EE": 5.5, "Ca": 0.35, "AvP": 0.20, "Cost_Kg": 1.60, "Max_Include": 20.0},
-            {"المادة الخام": "أمباز / كسبة زهرة الشمس مقشورة (SSC - منخفض الألياف)", "CP": 36.0, "ME_Kcal": 2450, "CF": 12.0, "EE": 6.5, "Ca": 0.30, "AvP": 0.22, "Cost_Kg": 2.10, "Max_Include": 25.0},
-            {"المادة الخام": "أمباز السوداني (Groundnut Cake)", "CP": 45.0, "ME_Kcal": 2500, "CF": 6.5, "EE": 7.0, "Ca": 0.20, "AvP": 0.18, "Cost_Kg": 2.60, "Max_Include": 20.0},
-            {"المادة الخام": "أمباز السمسم (Sesame Cake)", "CP": 40.0, "ME_Kcal": 2600, "CF": 6.0, "EE": 10.0, "Ca": 2.10, "AvP": 0.55, "Cost_Kg": 2.80, "Max_Include": 15.0},
-            {"المادة الخام": "كسبة بذرة القطن (Cottonseed Meal)", "CP": 38.0, "ME_Kcal": 2000, "CF": 11.0, "EE": 4.0, "Ca": 0.20, "AvP": 0.25, "Cost_Kg": 2.20, "Max_Include": 10.0},
-            {"المادة الخام": "كسبة فول الصويا (44%)", "CP": 44.0, "ME_Kcal": 2230, "CF": 6.0, "EE": 1.5, "Ca": 0.29, "AvP": 0.22, "Cost_Kg": 3.10, "Max_Include": 30.0},
-            {"المادة الخام": "كسبة فول الصويا (48%)", "CP": 48.0, "ME_Kcal": 2440, "CF": 3.5, "EE": 1.0, "Ca": 0.27, "AvP": 0.20, "Cost_Kg": 3.40, "Max_Include": 30.0},
-            {"المادة الخام": "مركز بياض/تسمين مستورد (5%)", "CP": 40.0, "ME_Kcal": 2100, "CF": 3.0, "EE": 2.0, "Ca": 6.50, "AvP": 3.00, "Cost_Kg": 5.80, "Max_Include": 5.0},
-            {"المادة الخام": "نخالة القمح (ردة)", "CP": 15.0, "ME_Kcal": 1300, "CF": 11.0, "EE": 4.0, "Ca": 0.14, "AvP": 0.28, "Cost_Kg": 0.95, "Max_Include": 25.0},
-            {"المادة الخام": "مولاس القصب", "CP": 4.0, "ME_Kcal": 1900, "CF": 0.0, "EE": 0.1, "Ca": 0.80, "AvP": 0.08, "Cost_Kg": 0.70, "Max_Include": 5.0},
-            {"المادة الخام": "حجر جيري (Limestone)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 38.0, "AvP": 0.00, "Cost_Kg": 0.20, "Max_Include": 4.0},
-            {"المادة الخام": "ثنائي فوسفات الكالسيوم (DCP)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 22.0, "AvP": 18.0, "Cost_Kg": 2.20, "Max_Include": 2.0},
-            {"المادة الخام": "DL-Methionine (مثيونين نقي)", "CP": 58.0, "ME_Kcal": 5000, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost_Kg": 12.00, "Max_Include": 0.3},
-            {"المادة الخام": "L-Lysine HCl (لايسين نقي)", "CP": 94.0, "ME_Kcal": 4100, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost_Kg": 9.50, "Max_Include": 0.4},
-            {"المادة الخام": "ملح الطعام (NaCl)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost_Kg": 0.30, "Max_Include": 0.5},
-            {"المادة الخام": "مخلوط فيتامينات ومعادن (Premix)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost_Kg": 8.00, "Max_Include": 0.5}
+            {"إدخال في العليقة": True, "المادة الخام": "ذرة رفيعة (فتريتة)", "CP": 9.0, "ME_Kcal": 3200, "CF": 2.5, "EE": 3.5, "Ca": 0.03, "AvP": 0.12, "Cost_Kg": 1.20, "Max_Include": 65.0},
+            {"إدخال في العليقة": True, "المادة الخام": "ذرة صفراء مجروشة", "CP": 8.5, "ME_Kcal": 3350, "CF": 2.2, "EE": 3.8, "Ca": 0.02, "AvP": 0.10, "Cost_Kg": 1.35, "Max_Include": 60.0},
+            {"إدخال في العليقة": False, "المادة الخام": "أمباز / كسبة زهرة الشمس (SSC - عالي الألياف)", "CP": 28.0, "ME_Kcal": 2100, "CF": 24.0, "EE": 5.5, "Ca": 0.35, "AvP": 0.20, "Cost_Kg": 1.60, "Max_Include": 20.0},
+            {"إدخال في العليقة": True, "المادة الخام": "أمباز / كسبة زهرة الشمس مقشورة (SSC - منخفض الألياف)", "CP": 36.0, "ME_Kcal": 2450, "CF": 12.0, "EE": 6.5, "Ca": 0.30, "AvP": 0.22, "Cost_Kg": 2.10, "Max_Include": 25.0},
+            {"إدخال في العليقة": True, "المادة الخام": "أمباز السوداني (Groundnut Cake)", "CP": 45.0, "ME_Kcal": 2500, "CF": 6.5, "EE": 7.0, "Ca": 0.20, "AvP": 0.18, "Cost_Kg": 2.60, "Max_Include": 20.0},
+            {"إدخال في العليقة": False, "المادة الخام": "أمباز السمسم (Sesame Cake)", "CP": 40.0, "ME_Kcal": 2600, "CF": 6.0, "EE": 10.0, "Ca": 2.10, "AvP": 0.55, "Cost_Kg": 2.80, "Max_Include": 15.0},
+            {"إدخال في العليقة": False, "المادة الخام": "كسبة بذرة القطن (Cottonseed Meal)", "CP": 38.0, "ME_Kcal": 2000, "CF": 11.0, "EE": 4.0, "Ca": 0.20, "AvP": 0.25, "Cost_Kg": 2.20, "Max_Include": 10.0},
+            {"إدخال في العليقة": True, "المادة الخام": "كسبة فول الصويا (44%)", "CP": 44.0, "ME_Kcal": 2230, "CF": 6.0, "EE": 1.5, "Ca": 0.29, "AvP": 0.22, "Cost_Kg": 3.10, "Max_Include": 30.0},
+            {"إدخال في العليقة": False, "المادة الخام": "كسبة فول الصويا (48%)", "CP": 48.0, "ME_Kcal": 2440, "CF": 3.5, "EE": 1.0, "Ca": 0.27, "AvP": 0.20, "Cost_Kg": 3.40, "Max_Include": 30.0},
+            {"إدخال في العليقة": True, "المادة الخام": "مركز بياض/تسمين مستورد (5%)", "CP": 40.0, "ME_Kcal": 2100, "CF": 3.0, "EE": 2.0, "Ca": 6.50, "AvP": 3.00, "Cost_Kg": 5.80, "Max_Include": 5.0},
+            {"إدخال في العليقة": True, "المادة الخام": "نخالة القمح (ردة)", "CP": 15.0, "ME_Kcal": 1300, "CF": 11.0, "EE": 4.0, "Ca": 0.14, "AvP": 0.28, "Cost_Kg": 0.95, "Max_Include": 25.0},
+            {"إدخال في العليقة": True, "المادة الخام": "مولاس القصب", "CP": 4.0, "ME_Kcal": 1900, "CF": 0.0, "EE": 0.1, "Ca": 0.80, "AvP": 0.08, "Cost_Kg": 0.70, "Max_Include": 5.0},
+            {"إدخال في العليقة": True, "المادة الخام": "حجر جيري (Limestone)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 38.0, "AvP": 0.00, "Cost_Kg": 0.20, "Max_Include": 4.0},
+            {"إدخال في العليقة": True, "المادة الخام": "ثنائي فوسفات الكالسيوم (DCP)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 22.0, "AvP": 18.0, "Cost_Kg": 2.20, "Max_Include": 2.0},
+            {"إدخال في العليقة": False, "المادة الخام": "DL-Methionine (مثيونين نقي)", "CP": 58.0, "ME_Kcal": 5000, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost_Kg": 12.00, "Max_Include": 0.3},
+            {"إدخال في العليقة": False, "المادة الخام": "L-Lysine HCl (لايسين نقي)", "CP": 94.0, "ME_Kcal": 4100, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost_Kg": 9.50, "Max_Include": 0.4},
+            {"إدخال في العليقة": True, "المادة الخام": "ملح الطعام (NaCl)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost_Kg": 0.30, "Max_Include": 0.5},
+            {"إدخال في العليقة": True, "المادة الخام": "مخلوط فيتامينات ومعادن (Premix)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost_Kg": 8.00, "Max_Include": 0.5}
         ])
 
     @staticmethod
     def get_breed_database():
-        """مكتبة السلالات ومواصفاتها الوراثية والإنتاجية"""
         return {
             "أبقار - هولشتاين (Holstein-Friesian)": {"type": "Cattle", "avg_milk": 7500, "fat_pct": 3.7, "h2_milk": 0.30, "h2_fat": 0.50},
             "أبقار - جيرسي (Jersey)": {"type": "Cattle", "avg_milk": 5000, "fat_pct": 4.8, "h2_milk": 0.28, "h2_fat": 0.52},
@@ -200,11 +194,11 @@ class DatabaseEngine:
 
 
 # ==========================================
-# 4. محرك التخطيط الخطي
+# 4. محرك التخطيط الخطي المعدل للاستجابة للتحديد
 # ==========================================
 class AdvancedFeedOptimizer:
-    def __init__(self, ingredients_df, target_cp, target_me, target_cf_max, target_ca, target_avp):
-        self.df = ingredients_df
+    def __init__(self, selected_df, target_cp, target_me, target_cf_max, target_ca, target_avp):
+        self.df = selected_df
         self.target_cp = target_cp
         self.target_me = target_me
         self.target_cf_max = target_cf_max
@@ -256,7 +250,7 @@ st.sidebar.markdown("<div class='watermark'>الملكية الفكرية محف
 
 
 # ==========================================
-# 6. القسم الأول: التطبيق الوراثي وتتبع الأجيال
+# 6. القسم الأول: التطبيق الوراثي
 # ==========================================
 if "1." in app_mode:
     st.subheader("🧬 التطبيق الوراثي وحساب التطور عبر الأجيال (Multi-Generational Engine)")
@@ -267,7 +261,6 @@ if "1." in app_mode:
         "🔄 تتبع التحسين عبر الأجيال (F1 - Fn)"
     ])
 
-    # --- التبويب الأول: السيادة ومربع بانيت ---
     with tab_gen1:
         st.markdown("##### 1. تحديد الصفة الوراثية ونوع السيادة:")
         col_gene, col_inheritance = st.columns(2)
@@ -332,7 +325,6 @@ if "1." in app_mode:
             fig_p = px.pie(values=list(pheno_prob.values()), names=list(pheno_prob.keys()), title="توزيع الطراز المظهري الناتج")
             st.plotly_chart(fig_p, use_container_width=True)
 
-    # --- التبويب الثاني: القيمة التربوية ---
     with tab_gen2:
         st.markdown("##### حساب القيمة التربوية المتوقعة (Estimated Breeding Value - EBV)")
         breeds_db = DatabaseEngine.get_breed_database()
@@ -374,11 +366,8 @@ if "1." in app_mode:
         res2.metric("القيمة التربوية للفرد (EBV)", f"{ebv:+.2f}")
         res3.metric("التحسين المتوقع في الأبناء", f"{offspring_gain:+.2f}")
 
-    # --- التبويب الثالث: تتبع الأجيال F1 - Fn ---
     with tab_gen3:
         st.markdown("##### 🧬 حساب التطور والتحسين الوراثي عبر الأجيال المتقدمة")
-        st.write("حساب الاستجابة للانتخاب المتكرر باستخدام خوارزمية: $\\Delta G = i \\cdot h^2 \\cdot \\sigma_p$")
-
         c_g1, c_g2, c_g3, c_g4 = st.columns(4)
         with c_g1:
             base_perf = st.number_input("متوسط جيل الأساس ($P_0$):", 1.0, 15000.0, 3000.0)
@@ -401,20 +390,20 @@ if "1." in app_mode:
 
         with col_gp:
             fig_gen = px.line(df_gen_res, x="الجيل", y="متوسط أداء الجيل المتوقع", markers=True, 
-                              title="مسار التحسين الوراثي عبر الأجيال (Genetic Gain Line)",
+                              title="مسار التحسين الوراثي عبر الأجيال",
                               text="متوسط أداء الجيل المتوقع")
             fig_gen.update_traces(textposition="top center")
             st.plotly_chart(fig_gen, use_container_width=True)
 
 
 # ==========================================
-# 7. القسم الثاني: تركيب العلائق بأقل تكلفة
+# 7. القسم الثاني: تركيب العلائق بأقل تكلفة مع الخامات المختارة
 # ==========================================
 elif "2." in app_mode:
-    st.subheader("🌾 صياغة العلائق الاقتصادية الموسعة متوازنة العناصر")
-    st.write("مكتبة موسعة تحوي أكثر من 18 عنصر علف محلي ومستورد لحساب التركيبة المثالية بالأحماض الأمينية والطاقة.")
+    st.subheader("🌾 صياغة العلائق الاقتصادية بناءً على الخامات المختارة")
+    st.write("ضع علامة (✔️) في خانة **'إدخال في العليقة'** أمام المكونات التي تريد التكوين منها فقط.")
 
-    tab_req, tab_ingredients = st.tabs(["1️⃣ الاحتياجات الغذائية", "2️⃣ مكتبة مواد العلف الموسعة"])
+    tab_req, tab_ingredients = st.tabs(["1️⃣ الاحتياجات الغذائية", "2️⃣ جدول الخامات واختيار المكونات"])
 
     with tab_req:
         st.markdown("##### حدد الاحتياجات الكيميائية المستهدفة للتركيبة:")
@@ -429,41 +418,60 @@ elif "2." in app_mode:
             req_cf_max = st.number_input("الألياف القصوى (CF %):", 2.0, 25.0, 6.0, step=0.5)
 
     with tab_ingredients:
-        st.markdown("##### جدول المواد الخام المتاحة (يمكنك تعديل الأسعار أو نسب الإدخال):")
+        st.markdown("##### جدول الخامات العلفية:")
         feed_df = DatabaseEngine.get_expanded_feed_ingredients()
-        edited_df = st.data_editor(feed_df, num_rows="dynamic", use_container_width=True)
+        
+        # عرض الجدول بشكل تفاعلي مع التحكم في خانات الاختيار
+        edited_df = st.data_editor(
+            feed_df, 
+            column_config={
+                "إدخال في العليقة": st.column_config.CheckboxColumn(
+                    "إدخال في العليقة",
+                    help="تحديد الخامات الداخلة في الحسابات",
+                    default=True,
+                )
+            },
+            num_rows="dynamic", 
+            use_container_width=True
+        )
 
     st.markdown("---")
-    if st.button("🚀 حساب العليقة الاقتصادية المثالية", type="primary", use_container_width=True):
-        optimizer = AdvancedFeedOptimizer(edited_df, req_cp, req_me, req_cf_max, req_ca, req_avp)
-        res = optimizer.optimize()
-
-        if res is not None and res.success:
-            st.success("✅ تم التوصل إلى التركيبة المثالية بأقل تكلفة بنجاح!")
-            
-            sol_df = edited_df[["المادة الخام", "Cost_Kg", "CP", "ME_Kcal", "CF", "Ca", "AvP"]].copy()
-            sol_df["النسبة في العليقة (%)"] = np.round(res.x * 100, 2)
-            sol_df["الوزن للطن (كجم)"] = np.round(res.x * 1000, 1)
-            sol_df["تكلفة العنصر/طن"] = np.round(res.x * 1000 * sol_df["Cost_Kg"], 2)
-
-            active_sol = sol_df[sol_df["النسبة في العليقة (%)"] > 0].reset_index(drop=True)
-
-            total_cost_kg = res.fun
-            c_cost1, c_cost2 = st.columns(2)
-            c_cost1.metric("تكلفة الكيلوجرام الصافي", f"${total_cost_kg:.3f}")
-            c_cost2.metric("التكلفة الإجمالية للطن", f"${total_cost_kg * 1000:.2f}")
-
-            col_t, col_p = st.columns([1.8, 1.2])
-            with col_t:
-                st.markdown("##### 📋 المكونات المحسوبة في العليقة:")
-                st.dataframe(active_sol, use_container_width=True)
-            
-            with col_p:
-                fig_pie = px.pie(active_sol, values="النسبة في العليقة (%)", names="المادة الخام", title="توزيع مكونات العليقة")
-                st.plotly_chart(fig_pie, use_container_width=True)
-
+    if st.button("🚀 حساب العليقة الاقتصادية من الخامات المختارة", type="primary", use_container_width=True):
+        # تصفية الجدول ليحتوي فقط على الخامات المفعلة
+        selected_df = edited_df[edited_df["إدخال في العليقة"] == True].reset_index(drop=True)
+        
+        if len(selected_df) == 0:
+            st.error("⚠️ لم تقم باختيار أي مادة خام! يُرجى وضع علامة (✔️) أمام مادة واحدة على الأقل في الجدول.")
         else:
-            st.error("❌ لم يتم العثور على حل يطابق القيود المحددة. يُرجى تعديل النسب المطلوبة أو فتح قيود الألياف.")
+            optimizer = AdvancedFeedOptimizer(selected_df, req_cp, req_me, req_cf_max, req_ca, req_avp)
+            res = optimizer.optimize()
+
+            if res is not None and res.success:
+                st.success("✅ تم التوصل إلى التركيبة المثالية بالأقل تكلفة من المكونات المختارة فقط!")
+                
+                sol_df = selected_df[["المادة الخام", "Cost_Kg", "CP", "ME_Kcal", "CF", "Ca", "AvP"]].copy()
+                sol_df["النسبة في العليقة (%)"] = np.round(res.x * 100, 2)
+                sol_df["الوزن للطن (كجم)"] = np.round(res.x * 1000, 1)
+                sol_df["تكلفة العنصر/طن"] = np.round(res.x * 1000 * sol_df["Cost_Kg"], 2)
+
+                active_sol = sol_df[sol_df["النسبة في العليقة (%)"] > 0].reset_index(drop=True)
+
+                total_cost_kg = res.fun
+                c_cost1, c_cost2 = st.columns(2)
+                c_cost1.metric("تكلفة الكيلوجرام الصافي", f"${total_cost_kg:.3f}")
+                c_cost2.metric("التكلفة الإجمالية للطن", f"${total_cost_kg * 1000:.2f}")
+
+                col_t, col_p = st.columns([1.8, 1.2])
+                with col_t:
+                    st.markdown("##### 📋 المكونات المحسوبة في العليقة الناتجة:")
+                    st.dataframe(active_sol, use_container_width=True)
+                
+                with col_p:
+                    fig_pie = px.pie(active_sol, values="النسبة في العليقة (%)", names="المادة الخام", title="توزيع مكونات العليقة")
+                    st.plotly_chart(fig_pie, use_container_width=True)
+
+            else:
+                st.error("❌ الخامات المختارة وحدها غير كافية لتحقيق المستهدف الغذائي المطلوب (مثلاً نقص في الطاقة أو ارتفاع في الألياف). يُرجى تفعيل خامات إضافية أو تعديل القيود.")
 
 
 # ==========================================
@@ -471,8 +479,6 @@ elif "2." in app_mode:
 # ==========================================
 elif "3." in app_mode:
     st.subheader("📊 تقييم إحلال أمباز/كسبة زهرة الشمس (Sunflower Seed Cake)")
-    st.write("محاكاة الأثر الاقتصادي عند استبدال كسبة زهرة الشمس بالمكونات التقليدية المرتفعة السعر.")
-
     col_e1, col_e2 = st.columns(2)
     with col_e1:
         ssc_rate = st.slider("نسبة الإحلال في العليقة (%):", 0, 30, 15)
@@ -492,11 +498,9 @@ elif "3." in app_mode:
 
 
 # ==========================================
-# 9. التبويب الرابع: الدليل الفني والسلالات
+# 9. التبويب الرابع: الدليل الفني
 # ==========================================
 else:
-    st.subheader("📚 دائم السلالات والمواصفات القياسية للإنتاج الحيواني")
-    st.write("بيانات ومعايير الأداء المعتمدة للسلالات ومقارنة إنتاجيتها:")
-    
+    st.subheader("📚 دليل السلالات والمواصفات القياسية للإنتاج الحيواني")
     breeds_data = DatabaseEngine.get_breed_database()
     st.json(breeds_data)
