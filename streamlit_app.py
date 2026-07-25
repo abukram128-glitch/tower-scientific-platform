@@ -97,14 +97,14 @@ st.markdown("""
 
 
 # ==========================================
-# 2. محرك الحسابات الوراثية الشامل (Mendelian Genetics Engine)
+# 2. محرك الحسابات الوراثية المحسن والمحمي
 # ==========================================
 class GeneticsEngine:
     """محرك تطبيقي لحساب الطرز الوراثية والمظهرية واستجابة الانتخاب"""
     
     @staticmethod
     def calculate_punnett_square(sire_genotype, dam_genotype, gene_info):
-        """حساب مربعات بانيت والطرز المظهرية بناءً على قوانين مندل والسيادة"""
+        """حساب مربعات بانيت والطرز المظهرية مع حماية كاملة من الأخطاء"""
         sire_alleles = [sire_genotype[0], sire_genotype[1]]
         dam_alleles = [dam_genotype[0], dam_genotype[1]]
         
@@ -118,15 +118,18 @@ class GeneticsEngine:
         # حساب النسب المئوية للطرز الجينية
         genotype_counts = pd.Series(offspring_genotypes).value_counts(normalize=True) * 100
         
-        # تحديد الطراز المظهري بناءً على نوع السيادة
+        # تحديد الطراز المظهري مع تفادي خطأ UnboundLocalError
         phenotype_results = {}
         for geno, prob in genotype_counts.items():
-            if gene_info["inheritance"] == "Complete Dominance":
+            # تعيين قيمة افتراضية صريحة
+            pheno = gene_info["dominant_trait"]
+            
+            if gene_info["inheritance"] == "Complete":
                 if gene_info["dominant_allele"] in geno:
                     pheno = gene_info["dominant_trait"]
                 else:
                     pheno = gene_info["recessive_trait"]
-            elif gene_info["inheritance"] == "Incomplete Dominance":
+            elif gene_info["inheritance"] == "Incomplete":
                 if geno == gene_info["dominant_allele"] * 2:
                     pheno = gene_info["dominant_trait"]
                 elif geno == gene_info["recessive_allele"] * 2:
@@ -134,13 +137,13 @@ class GeneticsEngine:
                 else:
                     pheno = gene_info["intermediate_trait"]
             
-            phenotype_results[pheno] = phenotype_results.get(pheno, 0) + prob
+            phenotype_results[pheno] = phenotype_results.get(pheno, 0.0) + prob
             
         return genotype_counts.to_dict(), phenotype_results, offspring_genotypes
 
     @staticmethod
     def calculate_breeding_value(heritability, individual_perf, population_avg):
-        """حساب القيمة التربوية المتوقعة والاستجابة للانتخاب: EBV = h^2 * (P - P_bar)"""
+        """حساب القيمة التربوية المتوقعة: EBV = h^2 * (P - P_bar)"""
         ebv = heritability * (individual_perf - population_avg)
         expected_offspring_gain = ebv / 2.0
         return ebv, expected_offspring_gain
@@ -241,31 +244,36 @@ if "1." in app_mode:
         with col_gene:
             gene_choice = st.selectbox("الصفة المراد دراستها:", [
                 "وجود القرون في الأبقار (Polled vs Horned - Gene P)",
-                "لون الفراء/الجلد (Black vs Red - Gene E)",
+                "لون الفراء/الجلد (Black vs Red - Gene B)",
                 "صفة الريش السريع/البطيء في الدواجن (Gene K)",
                 "صفة القزامى في الأغنام (Gene D)"
             ])
         
         with col_inheritance:
             inheritance_type = st.selectbox("نمط السيادة الوراثية:", [
-                "Complete Dominance (سيادة تامة)",
-                "Incomplete Dominance (سيادة غير تامة / نيم سائدة)"
+                "سيادة تامة (Complete Dominance)",
+                "سيادة غير تامة / غير كاملة (Incomplete Dominance)"
             ])
 
-        # ضبط رموز الجينات بناءً على الخيار
+        # ضبط شروط الرموز الوراثية
+        inh_mode = "Complete" if "تامة" in inheritance_type and "غير" not in inheritance_type else "Incomplete"
+
         if "Polled" in gene_choice:
-            g_info = {"dominant_allele": "P", "recessive_allele": "p", "dominant_trait": "عديم القرون (Polled)", "recessive_trait": "بقرون (Horned)", "intermediate_trait": "قرون ضامرة (Scars)", "inheritance": inheritance_type.split(" ")[0]}
+            g_info = {"dominant_allele": "P", "recessive_allele": "p", "dominant_trait": "عديم القرون (Polled)", "recessive_trait": "بقرون (Horned)", "intermediate_trait": "قرون ضامرة (Scars)", "inheritance": inh_mode}
         else:
-            g_info = {"dominant_allele": "B", "recessive_allele": "b", "dominant_trait": "اللون الأسود (Black)", "recessive_trait": "اللون الأحمر (Red)", "intermediate_trait": "لون بني/رمادي (Intermediate)", "inheritance": inheritance_type.split(" ")[0]}
+            g_info = {"dominant_allele": "B", "recessive_allele": "b", "dominant_trait": "اللون الأسود (Black)", "recessive_trait": "اللون الأحمر (Red)", "intermediate_trait": "لون بني/رمادي (Intermediate)", "inheritance": inh_mode}
 
         st.markdown("---")
         st.markdown("##### 2. الطراز الوراثي للآباء (Parental Genotypes):")
         c_sire, c_dam = st.columns(2)
         
+        dom = g_info["dominant_allele"]
+        rec = g_info["recessive_allele"]
+
         options_sire_dam = [
-            f"{g_info['dominant_allele']}{g_info['dominant_allele']} - نقاء سائد (Homozygous Dominant)",
-            f"{g_info['dominant_allele']}{g_info['recessive_allele']} - خليط/هجين (Heterozygous)",
-            f"{g_info['recessive_allele']}{g_info['recessive_allele']} - نقاء متنحي (Homozygous Recessive)"
+            f"{dom}{dom} - نقاء سائد (Homozygous Dominant)",
+            f"{dom}{rec} - خليط/هجين (Heterozygous)",
+            f"{rec}{rec} - نقاء متنحي (Homozygous Recessive)"
         ]
 
         with c_sire:
@@ -275,20 +283,19 @@ if "1." in app_mode:
             dam_geno_input = st.selectbox("الطراز الوراثي للأنثى (Dam):", options_sire_dam, index=1)
             dam_code = dam_geno_input.split(" ")[0]
 
-        # إجراء الحساب الوراثي
+        # إجراء الحساب الوراثي الآمن
         geno_prob, pheno_prob, raw_offspring = GeneticsEngine.calculate_punnett_square(sire_code, dam_code, g_info)
 
         st.markdown("---")
-        st.markdown("### 📋 النتائج العلمية للجيل النامج (F1 Generation Output)")
+        st.markdown("### 📋 النتائج العلمية للجيل الناتج (F1 Generation Output)")
 
         col_res_g, col_res_p = st.columns(2)
         
         with col_res_g:
             st.markdown("###### **نسب الطرز الوراثية المتوقعة (Genotypic Ratios):**")
             for g_code, prob in geno_prob.items():
-                st.write(f"- **{g_code}**: بنسبة `{prob:.1f}%` ({'سائد نقي' if g_code==g_info['dominant_allele']*2 else ('متنحي نقي' if g_code==g_info['recessive_allele']*2 else 'هجين')})")
+                st.write(f"- **{g_code}**: بنسبة `{prob:.1f}%` ({'سائد نقي' if g_code==dom*2 else ('متنحي نقي' if g_code==rec*2 else 'هجين')})")
             
-            # رسم بياني للطرز الجينية
             fig_g = px.bar(x=list(geno_prob.keys()), y=list(geno_prob.values()), labels={'x':'الطراز الجيني', 'y':'الاحتمالية %'}, title="توزيع الطراز الجيني")
             st.plotly_chart(fig_g, use_container_width=True)
 
@@ -297,11 +304,10 @@ if "1." in app_mode:
             for p_name, prob in pheno_prob.items():
                 st.write(f"- **{p_name}**: بنسبة `{prob:.1f}%` احتمال ظهور")
             
-            # رسم بياني للطرز المظهرية
             fig_p = px.pie(values=list(pheno_prob.values()), names=list(pheno_prob.keys()), title="توزيع الطراز المظهري الناتج")
             st.plotly_chart(fig_p, use_container_width=True)
 
-    # --- التبويب الثاني: القيمة التربوية والاستجابة للانتخاب ---
+    # --- التبويب الثاني: القيمة التربوية ---
     with tab_gen2:
         st.markdown("##### حساب القيمة التربوية المتوقعة (Estimated Breeding Value - EBV)")
         st.write("تعتمد الحسابات على المعادلة العلمية: $EBV = h^2 \\times (P - \\bar{P})$")
