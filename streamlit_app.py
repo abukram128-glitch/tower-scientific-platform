@@ -4,6 +4,8 @@ import numpy as np
 from scipy.optimize import linprog
 import plotly.express as px
 import plotly.graph_objects as go
+from gtts import gTTS
+import io
 
 # ==========================================
 # 1. تهيئة الصفحة والتصميم والأمان
@@ -59,14 +61,6 @@ st.markdown("""
         font-weight: 600;
     }
     
-    .genetic-card {
-        background-color: #F8FAFC;
-        border: 1px solid #E2E8F0;
-        border-radius: 10px;
-        padding: 16px;
-        margin-bottom: 12px;
-    }
-
     .stMetric {
         background-color: #FFFFFF !important;
         border: 1px solid #CBD5E1 !important;
@@ -81,6 +75,15 @@ st.markdown("""
         text-align: center;
         padding: 12px;
     }
+
+    .book-card {
+        background-color: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-right: 5px solid #0284C7;
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 15px;
+    }
     </style>
 
     <script>
@@ -91,6 +94,14 @@ st.markdown("""
             (e.ctrlKey && e.keyCode == 85)) {
             return false;
         }
+    }
+    
+    function speakText(text) {
+        window.speechSynthesis.cancel();
+        var msg = new SpeechSynthesisUtterance(text);
+        msg.lang = 'en-US';
+        msg.rate = 0.9;
+        window.speechSynthesis.speak(msg);
     }
     </script>
 """, unsafe_allow_html=True)
@@ -152,12 +163,11 @@ class GeneticsEngine:
 
 
 # ==========================================
-# 3. قواعد البيانات
+# 3. قواعد البيانات والمراجع
 # ==========================================
 class DatabaseEngine:
     @staticmethod
     def get_expanded_feed_ingredients():
-        """مكتبة المواد الخام مع عمود التحديد الصريح للاختيار"""
         return pd.DataFrame([
             {"إدخال في العليقة": True, "المادة الخام": "ذرة رفيعة (فتريتة)", "CP": 9.0, "ME_Kcal": 3200, "CF": 2.5, "EE": 3.5, "Ca": 0.03, "AvP": 0.12, "Cost_Kg": 1.20, "Max_Include": 65.0},
             {"إدخال في العليقة": True, "المادة الخام": "ذرة صفراء مجروشة", "CP": 8.5, "ME_Kcal": 3350, "CF": 2.2, "EE": 3.8, "Ca": 0.02, "AvP": 0.10, "Cost_Kg": 1.35, "Max_Include": 60.0},
@@ -192,9 +202,54 @@ class DatabaseEngine:
             "أغنام - العواسي / الحمري (Awassi)": {"type": "Sheep", "avg_milk": 280, "weaning_weight": 24, "h2_weight": 0.35}
         }
 
+    @staticmethod
+    def get_books_references():
+        return [
+            {
+                "category": "Animal Nutrition (تغذية الحيوان)",
+                "title": "McDonald's Animal Nutrition",
+                "authors": "P. McDonald, R.A. Edwards, J.F.D. Greenhalgh et al.",
+                "description": "This text provides a comprehensive introduction to the study of the nutrition of animals of agricultural importance. It introduces the fundamental principles of animal nutrition and covers nutrient digestion, metabolism, feed evaluation, and requirements for ruminants and monogastrics.",
+                "summary": "The definitive bible for animal nutrition principles, covering digestion, energy evaluation, and formulation.",
+                "link": "https://www.google.com/books/edition/McDonald_s_Animal_Nutrition/P9A0DwAAQBAJ"
+            },
+            {
+                "category": "Animal Nutrition (تغذية الحيوان)",
+                "title": "Basic Animal Nutrition and Feeding",
+                "authors": "Wilson G. Pond, David C. Church, Kevin R. Pond",
+                "description": "An essential reference detailing the chemical, biological, and practical aspects of livestock feeding and nutrient requirements.",
+                "summary": "Focuses on fundamental chemical aspects of nutrients and practical feeding systems.",
+                "link": "https://www.google.com/books/edition/Basic_Animal_Nutrition_and_Feeding/3E59AAAAMAAJ"
+            },
+            {
+                "category": "Poultry Science (علوم الدواجن)",
+                "title": "Commercial Poultry Nutrition",
+                "authors": "Steve Leeson and John D. Summers",
+                "description": "The standard worldwide reference for practical poultry formulation, covering detailed strain requirements for broilers, layers, and breeders.",
+                "summary": "Essential guide for practical feed mill formulation and poultry ration optimization.",
+                "link": "https://www.google.com/books/edition/Commercial_Poultry_Nutrition/XqK4QgAACAAJ"
+            },
+            {
+                "category": "Poultry Systems (أنظمة الدواجن)",
+                "title": "Poultry Production Systems: Behaviour, Management and Welfare",
+                "authors": "M. S. Dawkins and A. Rothwell",
+                "description": "Comprehensive reference covering modern poultry housing, environmental control, bird behavior, and commercial welfare standards.",
+                "summary": "Covers commercial production systems, ventilation, stocking density, and welfare parameters.",
+                "link": "https://www.google.com/books/edition/Poultry_Production_Systems/BTo9CwAAQBAJ"
+            },
+            {
+                "category": "Livestock Management (أنظمة التربية)",
+                "title": "Animal Feeding and Nutrition",
+                "authors": "Marshall H. Jurgens, Kristin Brejda",
+                "description": "Combines practical feeding management, ration evaluation, and specific requirements for beef, dairy, sheep, and poultry.",
+                "summary": "Applied textbook bridging the gap between theoretical nutrition and farm feeding strategies.",
+                "link": "https://www.google.com/books/edition/Animal_Feeding_and_Nutrition/zP0RAQAAMAAJ"
+            }
+        ]
+
 
 # ==========================================
-# 4. محرك التخطيط الخطي المعدل للاستجابة للتحديد
+# 4. محرك التخطيط الخطي
 # ==========================================
 class AdvancedFeedOptimizer:
     def __init__(self, selected_df, target_cp, target_me, target_cf_max, target_ca, target_avp):
@@ -242,7 +297,8 @@ app_mode = st.sidebar.radio("", [
     "1. الحسابات الوراثية وتتبع الأجيال (Multi-Generational Breeding)",
     "2. تركيب العلائق بأقل تكلفة (Expanded Least-Cost)",
     "3. دراسة إحلال كسبة زهرة الشمس",
-    "4. دليل السلالات والمواصفات القياسية"
+    "4. دليل السلالات والمواصفات القياسية",
+    "5. المكتبة العلمية والقارئ الصوتي (References & Audio Reader)"
 ])
 
 st.sidebar.markdown("---")
@@ -397,7 +453,7 @@ if "1." in app_mode:
 
 
 # ==========================================
-# 7. القسم الثاني: تركيب العلائق بأقل تكلفة مع الخامات المختارة
+# 7. القسم الثاني: تركيب العلائق بأقل تكلفة
 # ==========================================
 elif "2." in app_mode:
     st.subheader("🌾 صياغة العلائق الاقتصادية بناءً على الخامات المختارة")
@@ -421,7 +477,6 @@ elif "2." in app_mode:
         st.markdown("##### جدول الخامات العلفية:")
         feed_df = DatabaseEngine.get_expanded_feed_ingredients()
         
-        # عرض الجدول بشكل تفاعلي مع التحكم في خانات الاختيار
         edited_df = st.data_editor(
             feed_df, 
             column_config={
@@ -437,7 +492,6 @@ elif "2." in app_mode:
 
     st.markdown("---")
     if st.button("🚀 حساب العليقة الاقتصادية من الخامات المختارة", type="primary", use_container_width=True):
-        # تصفية الجدول ليحتوي فقط على الخامات المفعلة
         selected_df = edited_df[edited_df["إدخال في العليقة"] == True].reset_index(drop=True)
         
         if len(selected_df) == 0:
@@ -471,7 +525,7 @@ elif "2." in app_mode:
                     st.plotly_chart(fig_pie, use_container_width=True)
 
             else:
-                st.error("❌ الخامات المختارة وحدها غير كافية لتحقيق المستهدف الغذائي المطلوب (مثلاً نقص في الطاقة أو ارتفاع في الألياف). يُرجى تفعيل خامات إضافية أو تعديل القيود.")
+                st.error("❌ الخامات المختارة وحدها غير كافية لتحقيق المستهدف الغذائي المطلوب. يُرجى تفعيل خامات إضافية أو تعديل القيود.")
 
 
 # ==========================================
@@ -500,7 +554,77 @@ elif "3." in app_mode:
 # ==========================================
 # 9. التبويب الرابع: الدليل الفني
 # ==========================================
-else:
+elif "4." in app_mode:
     st.subheader("📚 دليل السلالات والمواصفات القياسية للإنتاج الحيواني")
     breeds_data = DatabaseEngine.get_breed_database()
     st.json(breeds_data)
+
+
+# ==========================================
+# 10. القسم الخامس: المكتبة العلمية والقارئ الصوتي
+# ==========================================
+else:
+    st.subheader("📖 المكتبة العلمية وقارئ الكتب الصوتي (Animal Science Literature & Audio Reader)")
+    
+    tab_lib, tab_audio = st.tabs(["📚 مراجع الإنتاج الحيواني والتغذية", "🔊 القارئ الصوتي المدمج للنصوص والـ PDF"])
+
+    with tab_lib:
+        st.markdown("##### أمهات الكتب والمراجع الأكاديمية باللغة الإنجليزية:")
+        books = DatabaseEngine.get_books_references()
+        
+        for i, book in enumerate(books):
+            st.markdown(f"""
+            <div class="book-card">
+                <span style="background-color: #0284C7; color: white; padding: 3px 8px; border-radius: 5px; font-size: 0.8rem;">{book['category']}</span>
+                <h4 style="margin-top: 8px; color: #0F172A;">{book['title']}</h4>
+                <p style="color: #475569; font-size: 0.9rem;"><b>المؤلفون:</b> {book['authors']}</p>
+                <p style="color: #334155; font-size: 0.95rem;">{book['description']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            c_btn1, c_btn2 = st.columns([1, 2])
+            with c_btn1:
+                clean_text = book['title'] + ". " + book['summary']
+                escaped_text = clean_text.replace("'", "\\'")
+                st.components.v1.html(
+                    f"""<button onclick="window.parent.speakText('{escaped_text}')" 
+                        style="background-color: #0284C7; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-family: Cairo; width: 100%;">
+                        🔊 استمع للملخص
+                    </button>""",
+                    height=45
+                )
+            with c_btn2:
+                st.link_button("🔗 فتح / قراءة الكتاب (Read Book)", book["link"], use_container_width=True)
+
+    with tab_audio:
+        st.markdown("##### 🔊 القارئ الصوتي الذكي (Text-To-Speech Engine)")
+        st.write("أدخل النص الذي تريد قراءته باللغة الإنجليزية أو قم برفع مقطع نصي للتحويل إلى صوت:")
+
+        input_text = st.text_area(
+            "النص المراد قراءته (English Text):", 
+            value="McDonald's Animal Nutrition is a primary reference covering energy systems, crude protein evaluation, and feeding requirements for poultry and ruminants.",
+            height=150
+        )
+
+        c_speed, c_lang = st.columns(2)
+        with c_speed:
+            speech_rate = st.select_slider("سرعة القراءة الصوتي:", options=["بطيء", "عادي"], value="عادي")
+        with c_lang:
+            lang_code = st.selectbox("اللغة:", ["الإنجليزية (English - US)"])
+
+        if st.button("🎧 توليد الملف الصوتي والاستماع", type="primary"):
+            if input_text.strip():
+                with st.spinner("جاري معالجة النص وتحويله إلى مقطع صوتي..."):
+                    try:
+                        slow_flag = True if speech_rate == "بطيء" else False
+                        tts = gTTS(text=input_text, lang='en', slow=slow_flag)
+                        fp = io.BytesIO()
+                        tts.write_to_fp(fp)
+                        fp.seek(0)
+                        
+                        st.success("✅ تم تحويل النص إلى صوت بنجاح!")
+                        st.audio(fp, format='audio/mp3')
+                    except Exception as e:
+                        st.error(f"حدث خطأ أثناء الاتصال بالمحرك الصوتي: {str(e)}")
+            else:
+                st.warning("⚠️ يرجى إدخال نص أولاً للقراءة.")
