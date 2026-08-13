@@ -200,12 +200,10 @@ st.markdown("""
         }
     }
     
-    // حماية إضافية
     window.addEventListener('beforeunload', function(e) {
         // منع حفظ الصفحة
     });
     
-    // منع اختيار النص
     document.addEventListener('selectstart', function(e) {
         e.preventDefault();
     });
@@ -213,7 +211,61 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. Banner الوالدين والدعاء
+# 2. تعريف محرك الوراثة الأساسي (يجب تعريفه أولاً)
+# ==========================================
+class GeneticsEngine:
+    
+    @staticmethod
+    def calculate_punnett_square(sire_genotype, dam_genotype, gene_info):
+        sire_alleles = [sire_genotype[0], sire_genotype[1]]
+        dam_alleles = [dam_genotype[0], dam_genotype[1]]
+        
+        offspring_genotypes = []
+        for s in sire_alleles:
+            for d in dam_alleles:
+                sorted_alleles = "".join(sorted([s, d], key=lambda x: (x.islower(), x)))
+                offspring_genotypes.append(sorted_alleles)
+                
+        genotype_counts = pd.Series(offspring_genotypes).value_counts(normalize=True) * 100
+        
+        phenotype_results = {}
+        for geno, prob in genotype_counts.items():
+            pheno = gene_info["dominant_trait"]
+            if gene_info["inheritance"] == "Complete":
+                if gene_info["dominant_allele"] in geno:
+                    pheno = gene_info["dominant_trait"]
+                else:
+                    pheno = gene_info["recessive_trait"]
+            elif gene_info["inheritance"] == "Incomplete":
+                if geno == gene_info["dominant_allele"] * 2:
+                    pheno = gene_info["dominant_trait"]
+                elif geno == gene_info["recessive_allele"] * 2:
+                    pheno = gene_info["recessive_trait"]
+                else:
+                    pheno = gene_info["intermediate_trait"]
+            
+            phenotype_results[pheno] = phenotype_results.get(pheno, 0.0) + prob
+            
+        return genotype_counts.to_dict(), phenotype_results, offspring_genotypes
+
+    @staticmethod
+    def simulate_multi_generations(initial_mean, heritability, selection_intensity, phenotype_std, generations=5):
+        gen_data = []
+        annual_gain = selection_intensity * heritability * phenotype_std
+        
+        for g in range(1, generations + 1):
+            ebv_gen = annual_gain * g
+            expected_mean = initial_mean + ebv_gen
+            gen_data.append({
+                "الجيل": f"الجيل F{g}",
+                "التحسين المتراكم (ΔG)": round(ebv_gen, 2),
+                "متوسط أداء الجيل المتوقع": round(expected_mean, 2)
+            })
+            
+        return pd.DataFrame(gen_data)
+
+# ==========================================
+# 3. Banner الوالدين والدعاء
 # ==========================================
 st.markdown(f"""
 <div class="banner-container">
@@ -240,7 +292,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 3. التطوير الشامل لقاعدة بيانات السلالات
+# 4. التطوير الشامل لقاعدة بيانات السلالات
 # ==========================================
 class PoultryDatabase:
     """قاعدة بيانات متكاملة لسلالات الدواجن"""
@@ -409,7 +461,7 @@ class PoultryDatabase:
         return predictions
 
 # ==========================================
-# 4. محرك التهجين المتقدم
+# 5. محرك التهجين المتقدم (وراثة GeneticsEngine)
 # ==========================================
 class AdvancedGeneticsEngine(GeneticsEngine):
     
@@ -433,17 +485,61 @@ class AdvancedGeneticsEngine(GeneticsEngine):
         return results
 
 # ==========================================
-# 5. تحديث محرك تركيب الأعلاف
+# 6. قواعد البيانات
 # ==========================================
-class EnhancedFeedOptimizer(AdvancedFeedOptimizer):
-    
-    def __init__(self, selected_df, target_cp, target_me, target_cf_max, target_ca, target_avp, 
-                 target_lys=None, target_met=None, target_cys=None):
-        super().__init__(selected_df, target_cp, target_me, target_cf_max, target_ca, target_avp)
+class DatabaseEngine:
+    @staticmethod
+    def get_expanded_feed_ingredients():
+        """مكتبة المواد الخام مع عمود التحديد الصريح للاختيار"""
+        return pd.DataFrame([
+            {"إدخال في العليقة": True, "المادة الخام": "ذرة رفيعة (فتريتة)", "CP": 9.0, "ME_Kcal": 3200, "CF": 2.5, "EE": 3.5, "Ca": 0.03, "AvP": 0.12, "Cost_Kg": 1.20, "Max_Include": 65.0},
+            {"إدخال في العليقة": True, "المادة الخام": "ذرة صفراء مجروشة", "CP": 8.5, "ME_Kcal": 3350, "CF": 2.2, "EE": 3.8, "Ca": 0.02, "AvP": 0.10, "Cost_Kg": 1.35, "Max_Include": 60.0},
+            {"إدخال في العليقة": False, "المادة الخام": "أمباز / كسبة زهرة الشمس (SSC - عالي الألياف)", "CP": 28.0, "ME_Kcal": 2100, "CF": 24.0, "EE": 5.5, "Ca": 0.35, "AvP": 0.20, "Cost_Kg": 1.60, "Max_Include": 20.0},
+            {"إدخال في العليقة": True, "المادة الخام": "أمباز / كسبة زهرة الشمس مقشورة (SSC - منخفض الألياف)", "CP": 36.0, "ME_Kcal": 2450, "CF": 12.0, "EE": 6.5, "Ca": 0.30, "AvP": 0.22, "Cost_Kg": 2.10, "Max_Include": 25.0},
+            {"إدخال في العليقة": True, "المادة الخام": "أمباز السوداني (Groundnut Cake)", "CP": 45.0, "ME_Kcal": 2500, "CF": 6.5, "EE": 7.0, "Ca": 0.20, "AvP": 0.18, "Cost_Kg": 2.60, "Max_Include": 20.0},
+            {"إدخال في العليقة": False, "المادة الخام": "أمباز السمسم (Sesame Cake)", "CP": 40.0, "ME_Kcal": 2600, "CF": 6.0, "EE": 10.0, "Ca": 2.10, "AvP": 0.55, "Cost_Kg": 2.80, "Max_Include": 15.0},
+            {"إدخال في العليقة": False, "المادة الخام": "كسبة بذرة القطن (Cottonseed Meal)", "CP": 38.0, "ME_Kcal": 2000, "CF": 11.0, "EE": 4.0, "Ca": 0.20, "AvP": 0.25, "Cost_Kg": 2.20, "Max_Include": 10.0},
+            {"إدخال في العليقة": True, "المادة الخام": "كسبة فول الصويا (44%)", "CP": 44.0, "ME_Kcal": 2230, "CF": 6.0, "EE": 1.5, "Ca": 0.29, "AvP": 0.22, "Cost_Kg": 3.10, "Max_Include": 30.0},
+            {"إدخال في العليقة": False, "المادة الخام": "كسبة فول الصويا (48%)", "CP": 48.0, "ME_Kcal": 2440, "CF": 3.5, "EE": 1.0, "Ca": 0.27, "AvP": 0.20, "Cost_Kg": 3.40, "Max_Include": 30.0},
+            {"إدخال في العليقة": True, "المادة الخام": "مركز بياض/تسمين مستورد (5%)", "CP": 40.0, "ME_Kcal": 2100, "CF": 3.0, "EE": 2.0, "Ca": 6.50, "AvP": 3.00, "Cost_Kg": 5.80, "Max_Include": 5.0},
+            {"إدخال في العليقة": True, "المادة الخام": "نخالة القمح (ردة)", "CP": 15.0, "ME_Kcal": 1300, "CF": 11.0, "EE": 4.0, "Ca": 0.14, "AvP": 0.28, "Cost_Kg": 0.95, "Max_Include": 25.0},
+            {"إدخال في العليقة": True, "المادة الخام": "مولاس القصب", "CP": 4.0, "ME_Kcal": 1900, "CF": 0.0, "EE": 0.1, "Ca": 0.80, "AvP": 0.08, "Cost_Kg": 0.70, "Max_Include": 5.0},
+            {"إدخال في العليقة": True, "المادة الخام": "حجر جيري (Limestone)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 38.0, "AvP": 0.00, "Cost_Kg": 0.20, "Max_Include": 4.0},
+            {"إدخال في العليقة": True, "المادة الخام": "ثنائي فوسفات الكالسيوم (DCP)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 22.0, "AvP": 18.0, "Cost_Kg": 2.20, "Max_Include": 2.0},
+            {"إدخال في العليقة": False, "المادة الخام": "DL-Methionine (مثيونين نقي)", "CP": 58.0, "ME_Kcal": 5000, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost_Kg": 12.00, "Max_Include": 0.3},
+            {"إدخال في العليقة": False, "المادة الخام": "L-Lysine HCl (لايسين نقي)", "CP": 94.0, "ME_Kcal": 4100, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost_Kg": 9.50, "Max_Include": 0.4},
+            {"إدخال في العليقة": True, "المادة الخام": "ملح الطعام (NaCl)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost_Kg": 0.30, "Max_Include": 0.5},
+            {"إدخال في العليقة": True, "المادة الخام": "مخلوط فيتامينات ومعادن (Premix)", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost_Kg": 8.00, "Max_Include": 0.5}
+        ])
+
+    @staticmethod
+    def get_breed_database():
+        return {
+            "أبقار - هولشتاين (Holstein-Friesian)": {"type": "Cattle", "avg_milk": 7500, "fat_pct": 3.7, "h2_milk": 0.30, "h2_fat": 0.50},
+            "أبقار - جيرسي (Jersey)": {"type": "Cattle", "avg_milk": 5000, "fat_pct": 4.8, "h2_milk": 0.28, "h2_fat": 0.52},
+            "أبقار - سيمنتال (Simmental)": {"type": "Cattle", "avg_milk": 5500, "fat_pct": 4.0, "h2_milk": 0.32, "h2_fat": 0.48},
+            "أبقار - سودانية محلية (Kena / Kenana)": {"type": "Cattle", "avg_milk": 1800, "fat_pct": 4.5, "h2_milk": 0.22, "h2_fat": 0.45},
+            "دواجن - Cobb 500 (تسمين)": {"type": "Poultry", "avg_weight_35d": 2.4, "fcr": 1.52, "h2_weight": 0.40},
+            "دواجن - Ross 308 (تسمين)": {"type": "Poultry", "avg_weight_35d": 2.38, "fcr": 1.54, "h2_weight": 0.38},
+            "دواجن - Hy-Line W-36 (بياض)": {"type": "Poultry", "avg_eggs": 320, "egg_weight": 62.0, "h2_eggs": 0.20},
+            "أغنام - العواسي / الحمري (Awassi)": {"type": "Sheep", "avg_milk": 280, "weaning_weight": 24, "h2_weight": 0.35}
+        }
+
+# ==========================================
+# 7. محرك التخطيط الخطي المعدل للاستجابة للتحديد
+# ==========================================
+class AdvancedFeedOptimizer:
+    def __init__(self, selected_df, target_cp, target_me, target_cf_max, target_ca, target_avp,
+                 target_lys=None, target_met=None):
+        self.df = selected_df
+        self.target_cp = target_cp
+        self.target_me = target_me
+        self.target_cf_max = target_cf_max
+        self.target_ca = target_ca
+        self.target_avp = target_avp
         self.target_lys = target_lys
         self.target_met = target_met
-        self.target_cys = target_cys
-        
+
     def optimize(self):
         try:
             costs = self.df["Cost_Kg"].values
@@ -453,12 +549,14 @@ class EnhancedFeedOptimizer(AdvancedFeedOptimizer):
             ca = self.df["Ca"].values
             avp = self.df["AvP"].values
             max_bounds = self.df["Max_Include"].values / 100.0
-            
-            # إضافة الأحماض الأمينية إذا كانت متوفرة
+
+            A_eq = [np.ones(len(costs))]
+            b_eq = [1.0]
+
             A_ub = [-cp, -me, cf, -ca, -avp]
             b_ub = [-self.target_cp, -self.target_me, self.target_cf_max, -self.target_ca, -self.target_avp]
-            
-            # إضافة قيود الأحماض الأمينية
+
+            # إضافة قيود الأحماض الأمينية إذا كانت موجودة
             if self.target_lys is not None and 'Lys' in self.df.columns:
                 A_ub.append(-self.df['Lys'].values)
                 b_ub.append(-self.target_lys)
@@ -466,21 +564,14 @@ class EnhancedFeedOptimizer(AdvancedFeedOptimizer):
             if self.target_met is not None and 'Met' in self.df.columns:
                 A_ub.append(-self.df['Met'].values)
                 b_ub.append(-self.target_met)
-            
-            A_eq = [np.ones(len(costs))]
-            b_eq = [1.0]
-            
+
             bounds = [(0, b) for b in max_bounds]
-            result = linprog(costs, A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, 
-                           bounds=bounds, method='highs')
-            
-            return result
-        except Exception as e:
-            st.error(f"خطأ في تحسين العليقة: {str(e)}")
+            return linprog(costs, A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
+        except Exception:
             return None
 
 # ==========================================
-# 6. الواجهة الرئيسية المطورة
+# 8. الواجهة الرئيسية المطورة
 # ==========================================
 st.markdown("""
     <div class="app-header">
@@ -493,7 +584,7 @@ st.markdown("""
 """.format(APP_VERSION, generate_license_hash()), unsafe_allow_html=True)
 
 # ==========================================
-# 7. القوائم الجانبية المطورة
+# 9. القوائم الجانبية المطورة
 # ==========================================
 st.sidebar.markdown("### 🌟 أروقة المنتدى المتطورة")
 app_mode = st.sidebar.radio("اختر التطبيق:", [
@@ -505,7 +596,7 @@ app_mode = st.sidebar.radio("اختر التطبيق:", [
 ])
 
 # ==========================================
-# 8. القسم الأول: الهندسة الوراثية المتقدمة
+# 10. القسم الأول: الهندسة الوراثية المتقدمة
 # ==========================================
 if "الهندسة الوراثية" in app_mode:
     st.subheader("🧬 محرك الهندسة الوراثية المتقدمة")
@@ -569,7 +660,7 @@ if "الهندسة الوراثية" in app_mode:
                         st.write(f"- {p}: {prob:.1f}%")
 
 # ==========================================
-# 9. القسم الثاني: تهجين الدواجن العالمي
+# 11. القسم الثاني: تهجين الدواجن العالمي
 # ==========================================
 elif "تهجين الدواجن" in app_mode:
     st.subheader("🐔 نظام تهجين الدواجن العالمي المتقدم")
@@ -652,7 +743,7 @@ elif "تهجين الدواجن" in app_mode:
             st.plotly_chart(fig, use_container_width=True)
 
 # ==========================================
-# 10. القسم الثالث: تركيب العلائق المتطور
+# 12. القسم الثالث: تركيب العلائق المتطور
 # ==========================================
 elif "تركيب العلائق" in app_mode:
     st.subheader("🌾 نظام تركيب العلائق المتطور (بمكونات متقدمة)")
@@ -716,7 +807,6 @@ elif "تركيب العلائق" in app_mode:
         with col_adv3:
             req_lys = st.number_input("اللايسين الأدنى (Lys %):", 0.0, 2.0, 0.8, step=0.05)
             req_met = st.number_input("المثيونين الأدنى (Met %):", 0.0, 1.0, 0.35, step=0.05)
-            req_met_cys = st.number_input("المثيونين + السيستين %:", 0.0, 1.5, 0.6, step=0.05)
     
     if st.button("🚀 حساب العليقة المثلى المتقدمة", type="primary", use_container_width=True):
         selected_df = edited_df[edited_df["إدخال في العليقة"] == True].reset_index(drop=True)
@@ -724,7 +814,7 @@ elif "تركيب العلائق" in app_mode:
         if len(selected_df) == 0:
             st.error("⚠️ يجب اختيار مادة خام واحدة على الأقل!")
         else:
-            optimizer = EnhancedFeedOptimizer(
+            optimizer = AdvancedFeedOptimizer(
                 selected_df, req_cp, req_me, req_cf_max, req_ca, req_avp,
                 req_lys, req_met
             )
@@ -769,7 +859,7 @@ elif "تركيب العلائق" in app_mode:
                 st.error("❌ الخامات المختارة غير كافية لتحقيق المستهدفات المطلوبة")
 
 # ==========================================
-# 11. القسم الرابع: دراسات الإحلال الاقتصادي
+# 13. القسم الرابع: دراسات الإحلال الاقتصادي
 # ==========================================
 elif "الإحلال الاقتصادي" in app_mode:
     st.subheader("📊 نظام دراسات الإحلال الاقتصادي المتقدم")
@@ -831,7 +921,7 @@ elif "الإحلال الاقتصادي" in app_mode:
     st.metric("التوفير السنوي المتوقع", f"${total_saving * 12:,.2f}")
 
 # ==========================================
-# 12. القسم الخامس: الموسوعة الوراثية
+# 14. القسم الخامس: الموسوعة الوراثية
 # ==========================================
 else:
     st.subheader("📚 الموسوعة الوراثية للسلالات العالمية")
@@ -874,7 +964,7 @@ else:
                     """)
 
 # ==========================================
-# 13. أسفل الصفحة
+# 15. أسفل الصفحة
 # ==========================================
 st.markdown("---")
 st.markdown("""
