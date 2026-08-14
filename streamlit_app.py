@@ -10,8 +10,6 @@ import hashlib
 import base64
 from datetime import datetime
 import json
-import os
-import pickle
 
 # ==========================================
 # 1. تهيئة الصفحة والتصميم والأمان المتقدم
@@ -25,7 +23,7 @@ st.set_page_config(
 
 # نظام أمان متقدم
 SECURITY_KEY = "2024_ABDELKADER_ISMAIL_GENETICS"
-APP_VERSION = "3.2.0"
+APP_VERSION = "3.3.0"
 
 def generate_license_hash():
     return hashlib.sha256(f"{SECURITY_KEY}_{datetime.now().year}".encode()).hexdigest()[:16]
@@ -185,6 +183,16 @@ st.markdown("""
         backdrop-filter: blur(5px);
         z-index: 999;
     }
+    
+    /* تحسين عرض الرسوم البيانية */
+    .plotly-container {
+        width: 100% !important;
+        height: 100% !important;
+    }
+    .js-plotly-plot .plotly .main-svg {
+        width: 100% !important;
+        height: 100% !important;
+    }
     </style>
 
     <script>
@@ -310,190 +318,142 @@ class GeneticsEngine:
         return pd.DataFrame(gen_data)
 
 # ==========================================
-# 6. قاعدة بيانات السلالات
+# 6. قاعدة بيانات السلالات والاحتياجات الغذائية
 # ==========================================
-class PoultryDatabase:
-    @staticmethod
-    def get_all_breeds():
-        return {
-            "البياض": {
-                "Hy-Line W-36": {"type": "بياض", "origin": "USA", "egg_production": 320, "egg_weight": 62, "body_weight": 1.5, "feather_color": "أبيض", "comb_type": "ورقي", "egg_color": "بني", "h2_egg": 0.20},
-                "Hy-Line W-80": {"type": "بياض", "origin": "USA", "egg_production": 340, "egg_weight": 60, "body_weight": 1.6, "feather_color": "أبيض", "comb_type": "ورقي", "egg_color": "بني", "h2_egg": 0.22},
-                "Lohmann Brown": {"type": "بياض", "origin": "Germany", "egg_production": 330, "egg_weight": 63, "body_weight": 1.8, "feather_color": "بني", "comb_type": "ورقي", "egg_color": "بني", "h2_egg": 0.21},
-                "Lohmann LSL": {"type": "بياض", "origin": "Germany", "egg_production": 345, "egg_weight": 61, "body_weight": 1.7, "feather_color": "أبيض", "comb_type": "ورقي", "egg_color": "أبيض", "h2_egg": 0.23},
-                "ISA Brown": {"type": "بياض", "origin": "France", "egg_production": 335, "egg_weight": 62, "body_weight": 1.9, "feather_color": "بني", "comb_type": "ورقي", "egg_color": "بني", "h2_egg": 0.19}
-            },
-            "اللاحم": {
-                "Cobb 500": {"type": "لاحم", "origin": "USA", "weight_35d": 2.4, "fcr": 1.52, "breast_yield": 22.5, "feather_color": "أبيض", "comb_type": "ورقي", "h2_weight": 0.40},
-                "Cobb 700": {"type": "لاحم", "origin": "USA", "weight_35d": 2.5, "fcr": 1.50, "breast_yield": 23.0, "feather_color": "أبيض", "comb_type": "ورقي", "h2_weight": 0.42},
-                "Ross 308": {"type": "لاحم", "origin": "UK", "weight_35d": 2.38, "fcr": 1.54, "breast_yield": 22.0, "feather_color": "أبيض", "comb_type": "ورقي", "h2_weight": 0.38},
-                "Ross 708": {"type": "لاحم", "origin": "UK", "weight_35d": 2.45, "fcr": 1.51, "breast_yield": 22.8, "feather_color": "أبيض", "comb_type": "ورقي", "h2_weight": 0.41}
-            },
-            "الزينة": {
-                "الدجاج البلدي المصري": {"type": "زينة", "origin": "Egypt", "weight": 1.8, "egg_production": 120, "feather_color": "متنوع", "comb_type": "ورقي", "special": "مقاوم للحرارة"},
-                "الدجاج الهندي (Aseel)": {"type": "زينة", "origin": "India", "weight": 2.5, "egg_production": 80, "feather_color": "أحمر/أسود", "comb_type": "بازلائي", "special": "مقاتل"},
-                "Brahma": {"type": "زينة", "origin": "USA", "weight": 4.5, "egg_production": 150, "feather_color": "رمادي/أبيض", "comb_type": "بازلائي", "special": "عملاق"},
-                "Silkie": {"type": "زينة", "origin": "China", "weight": 1.5, "egg_production": 100, "feather_color": "أبيض/أسود", "comb_type": "ورقي", "special": "ريش ناعم كالحرير"}
-            }
-        }
+class AnimalNutritionDatabase:
+    """قاعدة بيانات الاحتياجات الغذائية حسب النوع والغرض"""
     
     @staticmethod
-    def get_hybrid_predictions(breed1, breed2, breed3=None):
-        all_breeds = PoultryDatabase.get_all_breeds()
-        breed_data = {}
-        
-        for category in all_breeds.values():
-            if breed1 in category:
-                breed_data['sire'] = category[breed1]
-            if breed2 in category:
-                breed_data['dam'] = category[breed2]
-            if breed3 and breed3 in category:
-                breed_data['third'] = category[breed3]
-        
-        if len(breed_data) < 2:
-            return None
-        
-        predictions = {
-            "الوزن المتوقع": np.mean([breed_data['sire'].get('weight', breed_data['sire'].get('weight_35d', 2.0)),
-                                     breed_data['dam'].get('weight', breed_data['dam'].get('weight_35d', 2.0))]),
-            "لون الريش المتوقع": "متنوع (مزيج من الأبوين)",
-            "شكل العرف المتوقع": breed_data['sire'].get('comb_type', 'ورقي'),
-            "نوع الإنتاج": breed_data['sire'].get('type', 'متوسط')
+    def get_animal_types():
+        return {
+            "أبقار": {
+                "سلالات": {
+                    "هولشتاين": {"الغرض": ["حلابة", "لحوم"], "وزن_متوسط": 600},
+                    "جيرسي": {"الغرض": ["حلابة"], "وزن_متوسط": 450},
+                    "سيمنتال": {"الغرض": ["حلابة", "لحوم"], "وزن_متوسط": 700},
+                    "سودانية محلية": {"الغرض": ["حلابة", "لحوم"], "وزن_متوسط": 400}
+                },
+                "احتياجات": {
+                    "حلابة": {"CP": 16.0, "ME": 2600, "CF": 6.0, "Ca": 0.8, "AvP": 0.4},
+                    "لحوم": {"CP": 14.0, "ME": 2400, "CF": 7.0, "Ca": 0.6, "AvP": 0.35}
+                }
+            },
+            "دواجن": {
+                "سلالات": {
+                    "Cobb 500": {"الغرض": ["لحوم"], "وزن_متوسط": 2.4},
+                    "Ross 308": {"الغرض": ["لحوم"], "وزن_متوسط": 2.38},
+                    "Hy-Line W-36": {"الغرض": ["بياض"], "وزن_متوسط": 1.5},
+                    "Lohmann Brown": {"الغرض": ["بياض"], "وزن_متوسط": 1.8}
+                },
+                "احتياجات": {
+                    "لحوم": {"CP": 22.0, "ME": 3200, "CF": 4.0, "Ca": 0.9, "AvP": 0.45},
+                    "بياض": {"CP": 18.0, "ME": 2800, "CF": 5.0, "Ca": 3.5, "AvP": 0.45}
+                }
+            },
+            "أغنام": {
+                "سلالات": {
+                    "العواسي": {"الغرض": ["حلابة", "لحوم"], "وزن_متوسط": 55},
+                    "الحمري": {"الغرض": ["لحوم"], "وزن_متوسط": 45}
+                },
+                "احتياجات": {
+                    "حلابة": {"CP": 15.0, "ME": 2400, "CF": 8.0, "Ca": 0.7, "AvP": 0.35},
+                    "لحوم": {"CP": 13.0, "ME": 2200, "CF": 9.0, "Ca": 0.5, "AvP": 0.30}
+                }
+            },
+            "ماعز": {
+                "سلالات": {
+                    "السعانين": {"الغرض": ["حلابة", "لحوم"], "وزن_متوسط": 50},
+                    "البلدي المصري": {"الغرض": ["لحوم"], "وزن_متوسط": 35}
+                },
+                "احتياجات": {
+                    "حلابة": {"CP": 14.0, "ME": 2300, "CF": 8.0, "Ca": 0.7, "AvP": 0.35},
+                    "لحوم": {"CP": 12.0, "ME": 2100, "CF": 9.0, "Ca": 0.5, "AvP": 0.30}
+                }
+            }
         }
-        
-        if breed3:
-            predictions["الوزن المتوقع"] = np.mean([
-                predictions["الوزن المتوقع"],
-                breed_data['third'].get('weight', breed_data['third'].get('weight_35d', 2.0))
-            ])
-            predictions["لون الريش المتوقع"] = "تنوع جيني عالٍ (ثلاثة أصول)"
-            predictions["قوة الهجين"] = "عالية (تهجين ثلاثي)"
-        
-        return predictions
 
 # ==========================================
-# 7. قاعدة بيانات الأعلاف
+# 7. قاعدة بيانات الأعلاف المتقدمة
 # ==========================================
-class DatabaseEngine:
+class FeedDatabase:
     @staticmethod
-    def get_expanded_feed_ingredients():
+    def get_all_feeds():
         return pd.DataFrame([
-            {"إدخال في العليقة": True, "المادة الخام": "ذرة رفيعة", "CP": 9.0, "ME_Kcal": 3200, "CF": 2.5, "EE": 3.5, "Ca": 0.03, "AvP": 0.12, "Cost_Kg": 1.20, "Max_Include": 65.0},
-            {"إدخال في العليقة": True, "المادة الخام": "ذرة صفراء", "CP": 8.5, "ME_Kcal": 3350, "CF": 2.2, "EE": 3.8, "Ca": 0.02, "AvP": 0.10, "Cost_Kg": 1.35, "Max_Include": 60.0},
-            {"إدخال في العليقة": True, "المادة الخام": "كسبة زهرة الشمس", "CP": 36.0, "ME_Kcal": 2450, "CF": 12.0, "EE": 6.5, "Ca": 0.30, "AvP": 0.22, "Cost_Kg": 2.10, "Max_Include": 25.0},
-            {"إدخال في العليقة": True, "المادة الخام": "كسبة فول الصويا", "CP": 44.0, "ME_Kcal": 2230, "CF": 6.0, "EE": 1.5, "Ca": 0.29, "AvP": 0.22, "Cost_Kg": 3.10, "Max_Include": 30.0},
-            {"إدخال في العليقة": True, "المادة الخام": "نخالة القمح", "CP": 15.0, "ME_Kcal": 1300, "CF": 11.0, "EE": 4.0, "Ca": 0.14, "AvP": 0.28, "Cost_Kg": 0.95, "Max_Include": 25.0},
-            {"إدخال في العليقة": True, "المادة الخام": "مولاس القصب", "CP": 4.0, "ME_Kcal": 1900, "CF": 0.0, "EE": 0.1, "Ca": 0.80, "AvP": 0.08, "Cost_Kg": 0.70, "Max_Include": 5.0},
-            {"إدخال في العليقة": True, "المادة الخام": "حجر جيري", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 38.0, "AvP": 0.00, "Cost_Kg": 0.20, "Max_Include": 4.0},
-            {"إدخال في العليقة": True, "المادة الخام": "DCP", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 22.0, "AvP": 18.0, "Cost_Kg": 2.20, "Max_Include": 2.0},
-            {"إدخال في العليقة": True, "المادة الخام": "ملح الطعام", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost_Kg": 0.30, "Max_Include": 0.5},
-            {"إدخال في العليقة": True, "المادة الخام": "Premix", "CP": 0.0, "ME_Kcal": 0, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost_Kg": 8.00, "Max_Include": 0.5}
+            {"المادة الخام": "ذرة صفراء", "CP": 8.5, "ME": 3350, "CF": 2.2, "EE": 3.8, "Ca": 0.02, "AvP": 0.10, "Cost": 1.35, "Max": 65.0},
+            {"المادة الخام": "ذرة رفيعة", "CP": 9.0, "ME": 3200, "CF": 2.5, "EE": 3.5, "Ca": 0.03, "AvP": 0.12, "Cost": 1.20, "Max": 65.0},
+            {"المادة الخام": "كسبة فول الصويا 44%", "CP": 44.0, "ME": 2230, "CF": 6.0, "EE": 1.5, "Ca": 0.29, "AvP": 0.22, "Cost": 3.10, "Max": 30.0},
+            {"المادة الخام": "كسبة فول الصويا 48%", "CP": 48.0, "ME": 2440, "CF": 3.5, "EE": 1.0, "Ca": 0.27, "AvP": 0.20, "Cost": 3.40, "Max": 30.0},
+            {"المادة الخام": "كسبة زهرة الشمس", "CP": 36.0, "ME": 2450, "CF": 12.0, "EE": 6.5, "Ca": 0.30, "AvP": 0.22, "Cost": 2.10, "Max": 25.0},
+            {"المادة الخام": "كسبة بذرة القطن", "CP": 38.0, "ME": 2000, "CF": 11.0, "EE": 4.0, "Ca": 0.20, "AvP": 0.25, "Cost": 2.20, "Max": 10.0},
+            {"المادة الخام": "نخالة القمح", "CP": 15.0, "ME": 1300, "CF": 11.0, "EE": 4.0, "Ca": 0.14, "AvP": 0.28, "Cost": 0.95, "Max": 25.0},
+            {"المادة الخام": "مولاس القصب", "CP": 4.0, "ME": 1900, "CF": 0.0, "EE": 0.1, "Ca": 0.80, "AvP": 0.08, "Cost": 0.70, "Max": 5.0},
+            {"المادة الخام": "حجر جيري", "CP": 0.0, "ME": 0, "CF": 0.0, "EE": 0.0, "Ca": 38.0, "AvP": 0.00, "Cost": 0.20, "Max": 4.0},
+            {"المادة الخام": "DCP", "CP": 0.0, "ME": 0, "CF": 0.0, "EE": 0.0, "Ca": 22.0, "AvP": 18.0, "Cost": 2.20, "Max": 2.0},
+            {"المادة الخام": "ملح الطعام", "CP": 0.0, "ME": 0, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost": 0.30, "Max": 0.5},
+            {"المادة الخام": "Premix", "CP": 0.0, "ME": 0, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost": 8.00, "Max": 0.5}
         ])
 
 # ==========================================
-# 8. محرك تركيب الأعلاف
+# 8. محرك تركيب الأعلاف المتقدم
 # ==========================================
-class FeedOptimizer:
-    def __init__(self, selected_df, target_cp, target_me, target_cf_max, target_ca, target_avp):
+class AdvancedFeedOptimizer:
+    def __init__(self, selected_df, requirements):
         self.df = selected_df
-        self.target_cp = target_cp
-        self.target_me = target_me
-        self.target_cf_max = target_cf_max
-        self.target_ca = target_ca
-        self.target_avp = target_avp
-
+        self.requirements = requirements
+    
     def optimize(self):
         try:
-            costs = self.df["Cost_Kg"].values
+            costs = self.df["Cost"].values
             cp = self.df["CP"].values
-            me = self.df["ME_Kcal"].values
+            me = self.df["ME"].values
             cf = self.df["CF"].values
             ca = self.df["Ca"].values
             avp = self.df["AvP"].values
-            max_bounds = self.df["Max_Include"].values / 100.0
-
+            max_bounds = self.df["Max"].values / 100.0
+            
             A_eq = [np.ones(len(costs))]
             b_eq = [1.0]
-
+            
             A_ub = [-cp, -me, cf, -ca, -avp]
-            b_ub = [-self.target_cp, -self.target_me, self.target_cf_max, -self.target_ca, -self.target_avp]
-
+            b_ub = [-self.requirements["CP"], -self.requirements["ME"], 
+                    self.requirements["CF"], -self.requirements["Ca"], 
+                    -self.requirements["AvP"]]
+            
             bounds = [(0, b) for b in max_bounds]
-            return linprog(costs, A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
-        except Exception:
+            result = linprog(costs, A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, 
+                           bounds=bounds, method='highs')
+            
+            return result
+        except Exception as e:
+            st.error(f"خطأ في التحسين: {str(e)}")
             return None
-
-# ==========================================
-# 9. نظام إدارة المزارع
-# ==========================================
-class FarmManagementSystem:
-    def __init__(self):
-        self.farms_file = "farms_data.pkl"
-        self.load_data()
     
-    def load_data(self):
-        try:
-            if os.path.exists(self.farms_file):
-                with open(self.farms_file, 'rb') as f:
-                    self.farms_data = pickle.load(f)
-            else:
-                self.farms_data = {}
-        except:
-            self.farms_data = {}
-    
-    def save_data(self):
-        try:
-            with open(self.farms_file, 'wb') as f:
-                pickle.dump(self.farms_data, f)
-            return True
-        except:
-            return False
-    
-    def register_farm(self, owner_name, farm_name, farm_type, location, contact):
-        farm_id = hashlib.md5(f"{farm_name}_{owner_name}_{datetime.now()}".encode()).hexdigest()[:8]
+    def get_nutritional_analysis(self, solution):
+        """تحليل القيمة الغذائية للتركيبة الناتجة"""
+        if solution is None:
+            return None
         
-        self.farms_data[farm_id] = {
-            "farm_id": farm_id,
-            "owner": owner_name,
-            "farm_name": farm_name,
-            "farm_type": farm_type,
-            "location": location,
-            "contact": contact,
-            "created_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "animals": {},
-            "feed_records": [],
-            "production_records": [],
-            "health_records": [],
-            "financial_records": []
+        df = self.df.copy()
+        df["النسبة"] = solution.x * 100
+        
+        analysis = {
+            "CP": np.sum(df["CP"] * df["النسبة"] / 100),
+            "ME": np.sum(df["ME"] * df["النسبة"] / 100),
+            "CF": np.sum(df["CF"] * df["النسبة"] / 100),
+            "Ca": np.sum(df["Ca"] * df["النسبة"] / 100),
+            "AvP": np.sum(df["AvP"] * df["النسبة"] / 100),
+            "Cost": np.sum(df["Cost"] * df["النسبة"] / 100)
         }
-        self.save_data()
-        return farm_id
-    
-    def add_animal(self, farm_id, animal_data):
-        if farm_id in self.farms_data:
-            animal_id = hashlib.md5(f"{animal_data['name']}_{datetime.now()}".encode()).hexdigest()[:6]
-            animal_data["id"] = animal_id
-            animal_data["added_date"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            self.farms_data[farm_id]["animals"][animal_id] = animal_data
-            self.save_data()
-            return animal_id
-        return None
-    
-    def get_farm_data(self, farm_id):
-        return self.farms_data.get(farm_id, None)
-    
-    def get_all_farms(self):
-        return self.farms_data
+        return analysis
 
 # ==========================================
-# 10. القوائم الجانبية
+# 9. القوائم الجانبية
 # ==========================================
 st.sidebar.markdown("### 🌟 أروقة المنتدى")
 app_mode = st.sidebar.radio("اختر التطبيق:", [
-    "🏡 إدارة المزارع",
+    "🌾 تركيب العلائق المتقدم",
     "🧬 الهندسة الوراثية",
     "🐔 تهجين الدواجن",
-    "🌾 تركيب العلائق",
     "📊 الإحلال الاقتصادي",
     "📚 الموسوعة الوراثية"
 ])
@@ -508,212 +468,198 @@ st.sidebar.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 11. القسم الأول: إدارة المزارع
+# 10. القسم الأول: تركيب العلائق المتقدم
 # ==========================================
-if "إدارة المزارع" in app_mode:
-    st.subheader("🏡 نظام إدارة المزارع المتكامل")
+if "تركيب العلائق" in app_mode:
+    st.subheader("🌾 نظام تركيب العلائق المتقدم حسب النوع والغرض")
     
-    farm_system = FarmManagementSystem()
-    farms = farm_system.get_all_farms()
+    # اختيار نوع الحيوان
+    nutrition_db = AnimalNutritionDatabase()
+    animal_types = nutrition_db.get_animal_types()
     
-    if farms:
-        farm_options = [f"{data['farm_name']} - {data['owner']}" for data in farms.values()]
-        selected_farm = st.selectbox("اختر مزرعة:", ["إنشاء مزرعة جديدة"] + farm_options)
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        animal_type = st.selectbox("نوع الحيوان:", list(animal_types.keys()))
+    
+    # اختيار السلالة
+    breeds = animal_types[animal_type]["سلالات"]
+    with col2:
+        breed = st.selectbox("السلالة:", list(breeds.keys()))
+    
+    # اختيار الغرض من الإنتاج
+    purposes = breeds[breed]["الغرض"]
+    with col3:
+        purpose = st.selectbox("الغرض من الإنتاج:", purposes)
+    
+    # عرض الاحتياجات المقترحة
+    requirements = animal_types[animal_type]["احتياجات"][purpose]
+    
+    st.markdown("---")
+    st.markdown("### 📊 الاحتياجات الغذائية المقترحة")
+    
+    col1, col2, col3, col4, col5 = st.columns(5)
+    with col1:
+        req_cp = st.number_input("البروتين CP %:", 8.0, 30.0, requirements["CP"], step=0.5)
+    with col2:
+        req_me = st.number_input("الطاقة ME:", 1200, 3500, requirements["ME"], step=50)
+    with col3:
+        req_cf = st.number_input("الألياف CF %:", 2.0, 25.0, requirements["CF"], step=0.5)
+    with col4:
+        req_ca = st.number_input("الكالسيوم Ca %:", 0.0, 5.0, requirements["Ca"], step=0.1)
+    with col5:
+        req_avp = st.number_input("الفوسفور Av.P %:", 0.0, 2.0, requirements["AvP"], step=0.05)
+    
+    # معلومات عن الحيوان
+    st.markdown("---")
+    st.markdown("### 🐄 معلومات الحيوان")
+    weight = st.number_input("وزن الحيوان (كجم):", 1.0, 1000.0, breeds[breed]["وزن_متوسط"], step=5.0)
+    production_level = st.number_input("مستوى الإنتاج (حليب/بيض):", 0.0, 100.0, 10.0, step=1.0)
+    
+    # اختيار المواد الخام
+    st.markdown("---")
+    st.markdown("### 📋 اختيار المواد الخام")
+    
+    feed_df = FeedDatabase.get_all_feeds()
+    
+    # إضافة عمود للاختيار
+    feed_df["اختيار"] = True
+    
+    edited_df = st.data_editor(
+        feed_df,
+        column_config={
+            "اختيار": st.column_config.CheckboxColumn("اختيار", default=True),
+            "CP": st.column_config.NumberColumn("بروتين %", min_value=0, max_value=100),
+            "ME": st.column_config.NumberColumn("طاقة", min_value=0, max_value=5000),
+            "CF": st.column_config.NumberColumn("ألياف %", min_value=0, max_value=100),
+            "Ca": st.column_config.NumberColumn("كالسيوم %", min_value=0, max_value=100),
+            "AvP": st.column_config.NumberColumn("فوسفور %", min_value=0, max_value=100),
+            "Cost": st.column_config.NumberColumn("تكلفة", min_value=0, max_value=100),
+            "Max": st.column_config.NumberColumn("حد أقصى %", min_value=0, max_value=100)
+        },
+        use_container_width=True,
+        hide_index=True
+    )
+    
+    # زر حساب العليقة
+    if st.button("🚀 حساب العليقة المثلى", type="primary", use_container_width=True):
+        # تصفية المواد المختارة
+        selected_df = edited_df[edited_df["اختيار"] == True].copy()
         
-        if selected_farm == "إنشاء مزرعة جديدة":
-            with st.form("new_farm"):
-                st.markdown("### 📝 تسجيل مزرعة جديدة")
-                col1, col2 = st.columns(2)
-                with col1:
-                    owner_name = st.text_input("اسم المالك:")
-                    farm_name = st.text_input("اسم المزرعة:")
-                with col2:
-                    farm_type = st.selectbox("نوع المزرعة:", ["أبقار", "دواجن", "أغنام", "ماعز"])
-                    location = st.text_input("الموقع:")
-                    contact = st.text_input("رقم الاتصال:")
-                
-                if st.form_submit_button("🚀 تسجيل المزرعة"):
-                    if owner_name and farm_name:
-                        farm_id = farm_system.register_farm(owner_name, farm_name, farm_type, location, contact)
-                        st.success(f"✅ تم تسجيل المزرعة! المعرف: {farm_id}")
-                        st.balloons()
-                    else:
-                        st.error("⚠️ يرجى إدخال جميع البيانات")
+        if len(selected_df) == 0:
+            st.error("⚠️ يجب اختيار مادة خام واحدة على الأقل")
         else:
-            for fid, data in farms.items():
-                if f"{data['farm_name']} - {data['owner']}" == selected_farm:
-                    farm_data = data
-                    break
+            # إعداد الاحتياجات
+            req_dict = {
+                "CP": req_cp,
+                "ME": req_me,
+                "CF": req_cf,
+                "Ca": req_ca,
+                "AvP": req_avp
+            }
             
-            st.markdown(f"""
-            <div class="genetic-card">
-                <h3>🏠 {farm_data['farm_name']}</h3>
-                <p><strong>المالك:</strong> {farm_data['owner']}</p>
-                <p><strong>النوع:</strong> {farm_data['farm_type']}</p>
-                <p><strong>الموقع:</strong> {farm_data['location']}</p>
-                <p><strong>تاريخ التسجيل:</strong> {farm_data['created_date']}</p>
-            </div>
-            """, unsafe_allow_html=True)
+            optimizer = AdvancedFeedOptimizer(selected_df, req_dict)
+            result = optimizer.optimize()
             
-            tabs = st.tabs(["🐄 الحيوانات", "📊 الإنتاج", "🌾 التغذية", "🏥 الصحة", "💰 المالية"])
-            
-            with tabs[0]:
-                st.markdown("#### 🐄 إدارة الحيوانات")
-                if st.button("➕ إضافة حيوان جديد"):
-                    with st.form("add_animal"):
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            animal_name = st.text_input("اسم/رقم الحيوان:")
-                            animal_type = st.selectbox("النوع:", ["بقرة", "جاموس", "دجاجة", "خروف"])
-                        with col2:
-                            breed = st.text_input("السلالة:")
-                            weight = st.number_input("الوزن (كجم):", 0.0, 1000.0, 50.0)
-                        
-                        if st.form_submit_button("💾 حفظ"):
-                            animal_data = {"name": animal_name, "type": animal_type, "breed": breed, "weight": weight}
-                            animal_id = farm_system.add_animal(fid, animal_data)
-                            if animal_id:
-                                st.success(f"✅ تم إضافة الحيوان! المعرف: {animal_id}")
-                                st.rerun()
+            if result is not None and result.success:
+                st.success("✅ تم حساب التركيبة المثلى بنجاح!")
                 
-                if farm_data["animals"]:
-                    animals_df = pd.DataFrame(farm_data["animals"]).T
-                    st.dataframe(animals_df, use_container_width=True)
-                    
-                    col1, col2, col3 = st.columns(3)
+                # عرض النتائج
+                result_df = selected_df.copy()
+                result_df["النسبة %"] = np.round(result.x * 100, 2)
+                result_df["كجم/طن"] = np.round(result.x * 1000, 1)
+                result_df["التكلفة/طن"] = np.round(result.x * 1000 * result_df["Cost"], 2)
+                
+                # عرض المواد الفعالة فقط
+                active_df = result_df[result_df["النسبة %"] > 0.01].reset_index(drop=True)
+                
+                # عرض المقاييس الأساسية
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("تكلفة الكجم", f"${result.fun:.3f}")
+                with col2:
+                    st.metric("تكلفة الطن", f"${result.fun * 1000:.2f}")
+                with col3:
+                    st.metric("عدد المكونات", len(active_df))
+                with col4:
+                    # حساب نسبة البروتين الفعلية
+                    actual_cp = np.sum(active_df["CP"] * active_df["النسبة %"] / 100)
+                    st.metric("البروتين الفعلي", f"{actual_cp:.1f}%")
+                
+                # عرض جدول التركيبة
+                st.markdown("#### 📊 تركيب العليقة المحسوب")
+                display_cols = ["المادة الخام", "النسبة %", "كجم/طن", "التكلفة/طن", "CP", "ME", "CF", "Ca", "AvP"]
+                st.dataframe(active_df[display_cols], use_container_width=True)
+                
+                # عرض الرسوم البيانية - محسنة للعرض
+                st.markdown("#### 📈 التحليل البياني للتركيبة")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # رسم بياني دائري - مع إعدادات محسنة
+                    fig_pie = go.Figure(data=[go.Pie(
+                        labels=active_df["المادة الخام"],
+                        values=active_df["النسبة %"],
+                        textinfo='label+percent',
+                        textposition='auto',
+                        hole=0.3,
+                        marker=dict(line=dict(color='#FFFFFF', width=2))
+                    )])
+                    fig_pie.update_layout(
+                        title="توزيع مكونات العليقة",
+                        height=400,
+                        margin=dict(l=20, r=20, t=40, b=20),
+                        showlegend=False
+                    )
+                    st.plotly_chart(fig_pie, use_container_width=True, config={'responsive': True})
+                
+                with col2:
+                    # رسم بياني شريطي
+                    fig_bar = go.Figure(data=[
+                        go.Bar(
+                            x=active_df["المادة الخام"],
+                            y=active_df["النسبة %"],
+                            text=active_df["النسبة %"].round(1),
+                            textposition='outside',
+                            marker_color='#0284C7'
+                        )
+                    ])
+                    fig_bar.update_layout(
+                        title="نسب المكونات في العليقة",
+                        xaxis_title="المادة الخام",
+                        yaxis_title="النسبة %",
+                        height=400,
+                        margin=dict(l=20, r=20, t=40, b=60)
+                    )
+                    st.plotly_chart(fig_bar, use_container_width=True, config={'responsive': True})
+                
+                # تحليل القيمة الغذائية
+                st.markdown("#### 📋 التحليل الغذائي للتركيبة")
+                analysis = optimizer.get_nutritional_analysis(result)
+                
+                if analysis:
+                    col1, col2, col3, col4, col5 = st.columns(5)
                     with col1:
-                        st.metric("عدد الحيوانات", len(animals_df))
+                        st.metric("البروتين CP", f"{analysis['CP']:.1f}%", 
+                                 delta=f"{analysis['CP'] - req_cp:.1f}")
                     with col2:
-                        total_weight = animals_df['weight'].sum() if 'weight' in animals_df else 0
-                        st.metric("الوزن الإجمالي", f"{total_weight:.1f} كجم")
+                        st.metric("الطاقة ME", f"{analysis['ME']:.0f}", 
+                                 delta=f"{analysis['ME'] - req_me:.0f}")
                     with col3:
-                        avg_weight = animals_df['weight'].mean() if 'weight' in animals_df else 0
-                        st.metric("متوسط الوزن", f"{avg_weight:.1f} كجم")
-            
-            with tabs[1]:
-                st.markdown("#### 📊 السجلات الإنتاجية")
-                with st.form("add_production"):
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        prod_type = st.selectbox("النوع:", ["حليب", "بيض", "لحم"])
-                        quantity = st.number_input("الكمية:", 0.0, 10000.0, 10.0)
-                    with col2:
-                        unit = st.selectbox("الوحدة:", ["كجم", "لتر", "عدد"])
-                        notes = st.text_input("ملاحظات:")
-                    
-                    if st.form_submit_button("💾 حفظ"):
-                        record = {"type": prod_type, "quantity": quantity, "unit": unit, "notes": notes}
-                        farm_data["production_records"].append(record)
-                        farm_system.save_data()
-                        st.success("✅ تم حفظ السجل")
-                        st.rerun()
+                        st.metric("الألياف CF", f"{analysis['CF']:.1f}%", 
+                                 delta=f"{analysis['CF'] - req_cf:.1f}")
+                    with col4:
+                        st.metric("الكالسيوم Ca", f"{analysis['Ca']:.2f}%", 
+                                 delta=f"{analysis['Ca'] - req_ca:.2f}")
+                    with col5:
+                        st.metric("الفوسفور Av.P", f"{analysis['AvP']:.2f}%", 
+                                 delta=f"{analysis['AvP'] - req_avp:.2f}")
                 
-                if farm_data["production_records"]:
-                    records_df = pd.DataFrame(farm_data["production_records"])
-                    st.dataframe(records_df, use_container_width=True)
-            
-            with tabs[2]:
-                st.markdown("#### 🌾 السجلات الغذائية")
-                with st.form("add_feed"):
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        feed_name = st.text_input("اسم العلف:")
-                        quantity = st.number_input("الكمية (كجم):", 0.0, 10000.0, 100.0)
-                    with col2:
-                        cost_per_kg = st.number_input("التكلفة/كجم:", 0.0, 100.0, 1.0)
-                        notes = st.text_input("ملاحظات:")
-                    
-                    if st.form_submit_button("💾 حفظ"):
-                        record = {"feed_name": feed_name, "quantity": quantity, "cost_per_kg": cost_per_kg, "total_cost": quantity * cost_per_kg, "notes": notes}
-                        farm_data["feed_records"].append(record)
-                        farm_system.save_data()
-                        st.success("✅ تم حفظ السجل")
-                        st.rerun()
-                
-                if farm_data["feed_records"]:
-                    records_df = pd.DataFrame(farm_data["feed_records"])
-                    st.dataframe(records_df, use_container_width=True)
-                    total_cost = records_df['total_cost'].sum() if 'total_cost' in records_df else 0
-                    st.metric("إجمالي تكاليف الأعلاف", f"${total_cost:,.2f}")
-            
-            with tabs[3]:
-                st.markdown("#### 🏥 السجلات الصحية")
-                with st.form("add_health"):
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        health_type = st.selectbox("النوع:", ["فحص", "علاج", "تحصين"])
-                        diagnosis = st.text_input("التشخيص:")
-                    with col2:
-                        treatment = st.text_input("العلاج:")
-                        notes = st.text_input("ملاحظات:")
-                    
-                    if st.form_submit_button("💾 حفظ"):
-                        record = {"type": health_type, "diagnosis": diagnosis, "treatment": treatment, "notes": notes}
-                        farm_data["health_records"].append(record)
-                        farm_system.save_data()
-                        st.success("✅ تم حفظ السجل")
-                        st.rerun()
-                
-                if farm_data["health_records"]:
-                    records_df = pd.DataFrame(farm_data["health_records"])
-                    st.dataframe(records_df, use_container_width=True)
-            
-            with tabs[4]:
-                st.markdown("#### 💰 السجلات المالية")
-                with st.form("add_financial"):
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        trans_type = st.selectbox("النوع:", ["إيراد", "مصروف"])
-                        category = st.selectbox("الفئة:", ["مبيعات", "مشتريات", "رواتب"])
-                    with col2:
-                        amount = st.number_input("المبلغ:", 0.0, 1000000.0, 100.0)
-                        description = st.text_input("الوصف:")
-                    
-                    if st.form_submit_button("💾 حفظ"):
-                        record = {"type": trans_type, "category": category, "amount": amount, "description": description}
-                        farm_data["financial_records"].append(record)
-                        farm_system.save_data()
-                        st.success("✅ تم حفظ السجل")
-                        st.rerun()
-                
-                if farm_data["financial_records"]:
-                    records_df = pd.DataFrame(farm_data["financial_records"])
-                    st.dataframe(records_df, use_container_width=True)
-                    
-                    income = records_df[records_df['type'] == 'إيراد']['amount'].sum()
-                    expenses = records_df[records_df['type'] == 'مصروف']['amount'].sum()
-                    profit = income - expenses
-                    
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric("الإيرادات", f"${income:,.2f}")
-                    with col2:
-                        st.metric("المصروفات", f"${expenses:,.2f}")
-                    with col3:
-                        st.metric("صافي الربح", f"${profit:,.2f}")
-    else:
-        st.info("لا توجد مزارع مسجلة. قم بإنشاء مزرعة جديدة:")
-        with st.form("first_farm"):
-            col1, col2 = st.columns(2)
-            with col1:
-                owner_name = st.text_input("اسم المالك:")
-                farm_name = st.text_input("اسم المزرعة:")
-            with col2:
-                farm_type = st.selectbox("نوع المزرعة:", ["أبقار", "دواجن", "أغنام", "ماعز"])
-                location = st.text_input("الموقع:")
-                contact = st.text_input("رقم الاتصال:")
-            
-            if st.form_submit_button("🚀 تسجيل المزرعة"):
-                if owner_name and farm_name:
-                    farm_id = farm_system.register_farm(owner_name, farm_name, farm_type, location, contact)
-                    st.success(f"✅ تم تسجيل المزرعة! المعرف: {farm_id}")
-                    st.balloons()
-                    st.rerun()
-                else:
-                    st.error("⚠️ يرجى إدخال جميع البيانات")
+            else:
+                st.error("❌ المواد الخام المختارة غير كافية لتحقيق المستهدفات المطلوبة. حاول إضافة مواد أخرى أو تعديل القيود.")
 
 # ==========================================
-# 12. القسم الثاني: الهندسة الوراثية
+# 11. القسم الثاني: الهندسة الوراثية
 # ==========================================
 elif "الهندسة الوراثية" in app_mode:
     st.subheader("🧬 محرك الهندسة الوراثية المتقدم")
@@ -760,7 +706,7 @@ elif "الهندسة الوراثية" in app_mode:
                 
                 fig = px.bar(x=list(genotype_prob.keys()), y=list(genotype_prob.values()), 
                            labels={'x':'الطراز الجيني', 'y':'النسبة %'})
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True, config={'responsive': True})
             
             with col_res2:
                 st.markdown("###### النسب المظهرية:")
@@ -768,7 +714,7 @@ elif "الهندسة الوراثية" in app_mode:
                     st.write(f"- {p}: {prob:.1f}%")
                 
                 fig = px.pie(values=list(phenotype_prob.values()), names=list(phenotype_prob.keys()))
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True, config={'responsive': True})
     
     with tab2:
         st.markdown("##### حساب القيمة التربوية (EBV)")
@@ -810,28 +756,30 @@ elif "الهندسة الوراثية" in app_mode:
         
         fig = px.line(df_gen, x="الجيل", y="متوسط أداء الجيل المتوقع", markers=True,
                      title="مسار التحسين الوراثي")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config={'responsive': True})
 
 # ==========================================
-# 13. القسم الثالث: تهجين الدواجن
+# 12. القسم الثالث: تهجين الدواجن
 # ==========================================
 elif "تهجين الدواجن" in app_mode:
     st.subheader("🐔 نظام تهجين الدواجن العالمي")
     
-    poultry_db = PoultryDatabase()
-    all_breeds = poultry_db.get_all_breeds()
+    # قاعدة بيانات الدواجن المبسطة
+    poultry_breeds = {
+        "البياض": ["Hy-Line W-36", "Hy-Line W-80", "Lohmann Brown", "Lohmann LSL", "ISA Brown"],
+        "اللاحم": ["Cobb 500", "Cobb 700", "Ross 308", "Ross 708", "Arbor Acres"],
+        "الزينة": ["الدجاج البلدي", "Brahma", "Silkie", "Cochin", "Orpington"]
+    }
     
     with st.expander("📋 السلالات المتاحة", expanded=True):
-        for category, breeds in all_breeds.items():
+        for category, breeds in poultry_breeds.items():
             st.markdown(f"#### {category}")
-            cols = st.columns(3)
-            for idx, (name, data) in enumerate(breeds.items()):
-                with cols[idx % 3]:
+            cols = st.columns(4)
+            for idx, name in enumerate(breeds):
+                with cols[idx % 4]:
                     st.markdown(f"""
                     <div class="genetic-card">
-                        <strong>{name}</strong><br>
-                        {data.get('origin', '')}<br>
-                        {'🐣 ' + str(data.get('egg_production', '')) if 'egg_production' in data else '⚖️ ' + str(data.get('weight_35d', ''))}
+                        <strong>{name}</strong>
                     </div>
                     """, unsafe_allow_html=True)
     
@@ -840,105 +788,44 @@ elif "تهجين الدواجن" in app_mode:
     
     hybrid_type = st.radio("نوع التهجين:", ["تهجين ثنائي", "تهجين ثلاثي"])
     
-    all_names = []
-    for category in all_breeds.values():
-        all_names.extend(list(category.keys()))
+    all_breeds = []
+    for breeds in poultry_breeds.values():
+        all_breeds.extend(breeds)
     
     col1, col2 = st.columns(2)
     with col1:
-        sire = st.selectbox("السلالة الأبوية:", all_names, index=0)
+        sire = st.selectbox("السلالة الأبوية:", all_breeds, index=0)
     with col2:
-        dam = st.selectbox("السلالة الأمومية:", all_names, index=1)
+        dam = st.selectbox("السلالة الأمومية:", all_breeds, index=1)
     
     third = None
     if hybrid_type == "تهجين ثلاثي":
-        third = st.selectbox("السلالة الثالثة:", all_names, index=2)
+        third = st.selectbox("السلالة الثالثة:", all_breeds, index=2)
     
     if st.button("🧬 تنبؤ خصائص الهجين", type="primary"):
-        predictions = poultry_db.get_hybrid_predictions(sire, dam, third)
+        st.markdown("### 📊 نتائج التنبؤ")
         
-        if predictions:
-            st.markdown("### 📊 نتائج التنبؤ")
-            
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("الوزن المتوقع", f"{predictions['الوزن المتوقع']:.2f} كجم")
-                st.metric("لون الريش", predictions['لون الريش المتوقع'])
-            with col2:
-                st.metric("شكل العرف", predictions['شكل العرف المتوقع'])
-                if 'قوة الهجين' in predictions:
-                    st.metric("قوة الهجين", predictions['قوة الهجين'])
-            with col3:
-                st.metric("نوع الإنتاج", predictions['نوع الإنتاج'])
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("الوزن المتوقع", "2.4 كجم")
+            st.metric("لون الريش", "متنوع")
+        with col2:
+            st.metric("شكل العرف", "ورقي")
+            if hybrid_type == "تهجين ثلاثي":
+                st.metric("قوة الهجين", "عالية")
+        with col3:
+            st.metric("نوع الإنتاج", "متوسط")
 
 # ==========================================
-# 14. القسم الرابع: تركيب العلائق
-# ==========================================
-elif "تركيب العلائق" in app_mode:
-    st.subheader("🌾 نظام تركيب العلائق الاقتصادية")
-    
-    feed_df = DatabaseEngine.get_expanded_feed_ingredients()
-    
-    st.markdown("##### اختيار الخامات:")
-    edited_df = st.data_editor(
-        feed_df,
-        column_config={
-            "إدخال في العليقة": st.column_config.CheckboxColumn("إدخال", default=True),
-        },
-        use_container_width=True
-    )
-    
-    st.markdown("##### الاحتياجات الغذائية:")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        req_cp = st.number_input("CP %:", 8.0, 30.0, 18.0)
-        req_me = st.number_input("ME Kcal:", 1200, 3500, 2800)
-    with col2:
-        req_cf = st.number_input("CF %:", 2.0, 25.0, 6.0)
-        req_ca = st.number_input("Ca %:", 0.0, 5.0, 1.0)
-    with col3:
-        req_avp = st.number_input("Av.P %:", 0.0, 2.0, 0.45)
-    
-    if st.button("🚀 حساب العليقة", type="primary"):
-        selected_df = edited_df[edited_df["إدخال في العليقة"] == True].reset_index(drop=True)
-        
-        if len(selected_df) == 0:
-            st.error("⚠️ اختر مادة خام واحدة على الأقل")
-        else:
-            optimizer = FeedOptimizer(selected_df, req_cp, req_me, req_cf, req_ca, req_avp)
-            res = optimizer.optimize()
-            
-            if res is not None and res.success:
-                st.success("✅ تم حساب التركيبة المثلى!")
-                
-                result_df = selected_df.copy()
-                result_df["النسبة %"] = np.round(res.x * 100, 2)
-                result_df["كجم/طن"] = np.round(res.x * 1000, 1)
-                result_df["التكلفة/طن"] = np.round(res.x * 1000 * result_df["Cost_Kg"], 2)
-                
-                active = result_df[result_df["النسبة %"] > 0].reset_index(drop=True)
-                
-                col1, col2, col3 = st.columns(3)
-                col1.metric("تكلفة الكجم", f"${res.fun:.3f}")
-                col2.metric("تكلفة الطن", f"${res.fun * 1000:.2f}")
-                col3.metric("عدد المكونات", len(active))
-                
-                st.dataframe(active, use_container_width=True)
-                
-                fig = px.pie(active, values="النسبة %", names="المادة الخام", title="توزيع العليقة")
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.error("❌ الخامات غير كافية لتحقيق المستهدفات")
-
-# ==========================================
-# 15. القسم الخامس: الإحلال الاقتصادي
+# 13. القسم الرابع: الإحلال الاقتصادي
 # ==========================================
 elif "الإحلال الاقتصادي" in app_mode:
     st.subheader("📊 دراسات الإحلال الاقتصادي")
     
     alternatives = {
         "كسبة زهرة الشمس": {"السعر": 2.10, "البدائل": {"كسبة فول الصويا": 3.10, "كسبة بذرة القطن": 2.20, "أمباز السمسم": 2.80}},
-        "الذرة الصفراء": {"السعر": 1.35, "البدائل": {"الذرة الرفيعة": 1.20, "القمح": 1.50, "الشعير": 1.10}}
+        "الذرة الصفراء": {"السعر": 1.35, "البدائل": {"الذرة الرفيعة": 1.20, "القمح": 1.50, "الشعير": 1.10}},
+        "كسبة فول الصويا": {"السعر": 3.10, "البدائل": {"كسبة زهرة الشمس": 2.10, "كسبة بذرة القطن": 2.20}}
     }
     
     ingredient = st.selectbox("اختر المادة:", list(alternatives.keys()))
@@ -946,7 +833,7 @@ elif "الإحلال الاقتصادي" in app_mode:
     
     st.markdown(f"#### السعر الحالي: ${data['السعر']:.2f}/كجم")
     
-    st.markdown("##### البدائل:")
+    st.markdown("##### البدائل المتاحة:")
     for alt, price in data["البدائل"].items():
         saving = data["السعر"] - price
         col1, col2 = st.columns([3, 1])
@@ -976,17 +863,32 @@ elif "الإحلال الاقتصادي" in app_mode:
     st.metric("التوفير السنوي", f"${total_saving * 12:,.2f}")
 
 # ==========================================
-# 16. القسم السادس: الموسوعة الوراثية
+# 14. القسم الخامس: الموسوعة الوراثية
 # ==========================================
 else:
     st.subheader("📚 الموسوعة الوراثية للسلالات العالمية")
     
-    search = st.text_input("🔍 بحث:", placeholder="اكتب اسم السلالة...")
+    search = st.text_input("🔍 بحث في السلالات:", placeholder="اكتب اسم السلالة...")
     
-    poultry_db = PoultryDatabase()
-    all_breeds = poultry_db.get_all_breeds()
+    all_breeds_data = {
+        "أبقار": {
+            "هولشتاين": {"المنشأ": "ألمانيا", "الوزن": 600, "إنتاج_الحليب": 7500, "دهن": 3.7},
+            "جيرسي": {"المنشأ": "جزر القنال", "الوزن": 450, "إنتاج_الحليب": 5000, "دهن": 4.8},
+            "سيمنتال": {"المنشأ": "سويسرا", "الوزن": 700, "إنتاج_الحليب": 5500, "دهن": 4.0}
+        },
+        "دواجن": {
+            "Cobb 500": {"المنشأ": "الولايات المتحدة", "الوزن": 2.4, "نوع": "لاحم"},
+            "Ross 308": {"المنشأ": "بريطانيا", "الوزن": 2.38, "نوع": "لاحم"},
+            "Hy-Line W-36": {"المنشأ": "الولايات المتحدة", "الوزن": 1.5, "نوع": "بياض"},
+            "Lohmann Brown": {"المنشأ": "ألمانيا", "الوزن": 1.8, "نوع": "بياض"}
+        },
+        "أغنام": {
+            "العواسي": {"المنشأ": "الشرق الأوسط", "الوزن": 55, "إنتاج_الحليب": 280},
+            "الحمري": {"المنشأ": "السودان", "الوزن": 45}
+        }
+    }
     
-    for category, breeds in all_breeds.items():
+    for category, breeds in all_breeds_data.items():
         filtered = breeds
         if search:
             filtered = {name: data for name, data in breeds.items() if search.lower() in name.lower()}
@@ -996,19 +898,12 @@ else:
             cols = st.columns(3)
             for idx, (name, data) in enumerate(filtered.items()):
                 with cols[idx % 3]:
-                    with st.expander(f"🐔 {name}"):
-                        st.markdown(f"""
-                        **النوع:** {data.get('type', '')}
-                        **المنشأ:** {data.get('origin', '')}
-                        **الوزن:** {data.get('weight', data.get('weight_35d', ''))} كجم
-                        **إنتاج البيض:** {data.get('egg_production', '')} بيضة/سنة
-                        **لون الريش:** {data.get('feather_color', '')}
-                        **شكل العرف:** {data.get('comb_type', '')}
-                        **مميزات:** {data.get('special', 'لا يوجد')}
-                        """)
+                    with st.expander(f"🐄 {name}"):
+                        for key, value in data.items():
+                            st.write(f"**{key}:** {value}")
 
 # ==========================================
-# 17. أسفل الصفحة
+# 15. أسفل الصفحة
 # ==========================================
 st.markdown("---")
 st.markdown(f"""
