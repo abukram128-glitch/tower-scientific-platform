@@ -23,7 +23,7 @@ st.set_page_config(
 
 # نظام أمان متقدم
 SECURITY_KEY = "2024_ABDELKADER_ISMAIL_GENETICS"
-APP_VERSION = "3.4.0"
+APP_VERSION = "3.5.0"
 
 def generate_license_hash():
     return hashlib.sha256(f"{SECURITY_KEY}_{datetime.now().year}".encode()).hexdigest()[:16]
@@ -693,7 +693,7 @@ if "تركيب العلائق" in app_mode:
                 display_cols = ["المادة الخام", "النسبة %", "كجم/طن", "التكلفة/طن", "CP", "ME", "CF", "Ca", "AvP"]
                 st.dataframe(active_df[display_cols], use_container_width=True)
                 
-                # عرض الرسوم البيانية
+                # عرض الرسوم البيانية - مع إصلاح الخطأ
                 st.markdown("### 📊 التحليل البياني للتركيبة")
                 
                 col1, col2 = st.columns(2)
@@ -718,7 +718,7 @@ if "تركيب العلائق" in app_mode:
                     st.plotly_chart(fig_pie, use_container_width=True, config={'responsive': True})
                 
                 with col2:
-                    # رسم بياني شريطي
+                    # رسم بياني شريطي - مع إصلاح الخطأ
                     fig_bar = go.Figure(data=[
                         go.Bar(
                             x=active_df["المادة الخام"],
@@ -737,7 +737,9 @@ if "تركيب العلائق" in app_mode:
                         margin=dict(l=20, r=20, t=50, b=80),
                         font=dict(family="Cairo, sans-serif", size=12)
                     )
-                    fig_bar.update_xaxis(tickangle=45)
+                    # إصلاح الخطأ: التحقق من وجود البيانات قبل تطبيق tickangle
+                    if len(active_df) > 0:
+                        fig_bar.update_xaxis(tickangle=45)
                     st.plotly_chart(fig_bar, use_container_width=True, config={'responsive': True})
                 
                 # تحليل القيمة الغذائية
@@ -811,17 +813,19 @@ elif "الهندسة الوراثية" in app_mode:
                 for g, p in genotype_prob.items():
                     st.write(f"- {g}: {p:.1f}%")
                 
-                fig = px.bar(x=list(genotype_prob.keys()), y=list(genotype_prob.values()), 
-                           labels={'x':'الطراز الجيني', 'y':'النسبة %'})
-                st.plotly_chart(fig, use_container_width=True, config={'responsive': True})
+                if len(genotype_prob) > 0:
+                    fig = px.bar(x=list(genotype_prob.keys()), y=list(genotype_prob.values()), 
+                               labels={'x':'الطراز الجيني', 'y':'النسبة %'})
+                    st.plotly_chart(fig, use_container_width=True, config={'responsive': True})
             
             with col_res2:
                 st.markdown("###### النسب المظهرية:")
                 for p, prob in phenotype_prob.items():
                     st.write(f"- {p}: {prob:.1f}%")
                 
-                fig = px.pie(values=list(phenotype_prob.values()), names=list(phenotype_prob.keys()))
-                st.plotly_chart(fig, use_container_width=True, config={'responsive': True})
+                if len(phenotype_prob) > 0:
+                    fig = px.pie(values=list(phenotype_prob.values()), names=list(phenotype_prob.keys()))
+                    st.plotly_chart(fig, use_container_width=True, config={'responsive': True})
     
     with tab2:
         st.markdown("##### حساب القيمة التربوية (EBV)")
@@ -861,9 +865,10 @@ elif "الهندسة الوراثية" in app_mode:
         
         st.dataframe(df_gen, use_container_width=True)
         
-        fig = px.line(df_gen, x="الجيل", y="متوسط أداء الجيل المتوقع", markers=True,
-                     title="مسار التحسين الوراثي")
-        st.plotly_chart(fig, use_container_width=True, config={'responsive': True})
+        if len(df_gen) > 0:
+            fig = px.line(df_gen, x="الجيل", y="متوسط أداء الجيل المتوقع", markers=True,
+                         title="مسار التحسين الوراثي")
+            st.plotly_chart(fig, use_container_width=True, config={'responsive': True})
 
 # ==========================================
 # 12. القسم الثالث: تهجين الدواجن
