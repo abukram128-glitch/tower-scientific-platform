@@ -23,7 +23,7 @@ st.set_page_config(
 
 # نظام أمان متقدم
 SECURITY_KEY = "2024_ABDELKADER_ISMAIL_GENETICS"
-APP_VERSION = "3.3.0"
+APP_VERSION = "3.4.0"
 
 def generate_license_hash():
     return hashlib.sha256(f"{SECURITY_KEY}_{datetime.now().year}".encode()).hexdigest()[:16]
@@ -123,7 +123,7 @@ st.markdown("""
         background: linear-gradient(135deg, #1E3A5F, #0F172A);
         border: 2px solid #FCD34D;
         border-radius: 10px;
-        padding: 15px;
+        padding: 20px;
         margin: 10px 0;
         text-align: center;
         box-shadow: 0 4px 15px rgba(252, 211, 77, 0.15);
@@ -131,14 +131,23 @@ st.markdown("""
     
     .dedication-text {
         color: #FCD34D;
-        font-size: 1.3rem;
+        font-size: 1.4rem;
         font-weight: 700;
+        margin-bottom: 10px;
     }
     
     .dedication-sub {
         color: #93C5FD;
         font-size: 1rem;
         margin-top: 5px;
+    }
+    
+    .dedication-names {
+        color: #FCD34D;
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin: 10px 0;
+        text-shadow: 0 0 20px rgba(252, 211, 77, 0.3);
     }
     
     .genetic-card {
@@ -184,7 +193,6 @@ st.markdown("""
         z-index: 999;
     }
     
-    /* تحسين عرض الرسوم البيانية */
     .plotly-container {
         width: 100% !important;
         height: 100% !important;
@@ -224,16 +232,16 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 3. Banner الوالدين والدعاء
+# 3. Banner الوالدين والدعاء المحدث
 # ==========================================
 st.markdown(f"""
 <div class="banner-container">
     <div class="banner-text">
         <span class="arabic">🤲 اللهم اغفر لوالدي وارحمهما كما ربّياني صغيراً</span>
         <span style="color: #FCD34D; margin: 0 10px;">|</span>
-        <span class="arabic">❤️ هذا البرنامج وقفاً للمرحوم بإذن الله <strong>إسماعيل تاور</strong></span>
+        <span class="arabic">❤️ هذا البرنامج وقفاً للمرحومين</span>
         <span style="color: #FCD34D; margin: 0 10px;">|</span>
-        <span class="arabic">🕋 نسأل الله أن يتقبله في عليين</span>
+        <span class="arabic">🕋 نسأل الله أن يتقبلهما في عليين</span>
         <span style="color: #FCD34D; margin: 0 10px;">|</span>
         <span class="prayer">اللهم آمين</span>
         <span style="color: #FCD34D; margin: 0 10px;">|</span>
@@ -242,10 +250,16 @@ st.markdown(f"""
 </div>
 
 <div class="dedication-box">
-    <div class="dedication-text">🤲 إهداء إلى روح والدي الغالي</div>
-    <div class="dedication-sub">اللهم اغفر له وارحمه وعافه واعفُ عنه، وأكرم نزله، ووسع مدخله، واغسله بالماء والثلج والبرد، ونقه من الذنوب والخطايا كما ينقى الثوب الأبيض من الدنس</div>
+    <div class="dedication-text">🤲 إهداء إلى روح والدي الغالي وأختي الغالية</div>
+    <div class="dedication-names">
+        المرحوم <strong>إسماعيل تاور</strong> 🤲
+    </div>
+    <div class="dedication-names" style="color: #60A5FA;">
+        والأخت <strong>ابتسام إسماعيل تاور</strong> 🤲
+    </div>
+    <div class="dedication-sub">اللهم اغفر لهما وارحمهما وعافهما واعفُ عنهما، وأكرم نزلهما، ووسع مدخلهما، واغسلهما بالماء والثلج والبرد، ونقهما من الذنوب والخطايا كما ينقى الثوب الأبيض من الدنس</div>
     <div class="dedication-sub" style="font-size: 0.9rem; margin-top: 8px; color: #FCD34D;">
-        هذا العمل العلمي صدقة جارية على روح المرحوم إسماعيل تاور - رحمه الله رحمة واسعة
+        هذا العمل العلمي صدقة جارية على روحيهما - رحمهما الله رحمة واسعة
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -318,56 +332,48 @@ class GeneticsEngine:
         return pd.DataFrame(gen_data)
 
 # ==========================================
-# 6. قاعدة بيانات السلالات والاحتياجات الغذائية
+# 6. قاعدة بيانات الاحتياجات الغذائية المتقدمة
 # ==========================================
 class AnimalNutritionDatabase:
-    """قاعدة بيانات الاحتياجات الغذائية حسب النوع والغرض"""
+    """قاعدة بيانات متقدمة للاحتياجات الغذائية حسب النوع والإنتاج"""
     
     @staticmethod
     def get_animal_types():
         return {
             "أبقار": {
-                "سلالات": {
-                    "هولشتاين": {"الغرض": ["حلابة", "لحوم"], "وزن_متوسط": 600},
-                    "جيرسي": {"الغرض": ["حلابة"], "وزن_متوسط": 450},
-                    "سيمنتال": {"الغرض": ["حلابة", "لحوم"], "وزن_متوسط": 700},
-                    "سودانية محلية": {"الغرض": ["حلابة", "لحوم"], "وزن_متوسط": 400}
-                },
-                "احتياجات": {
-                    "حلابة": {"CP": 16.0, "ME": 2600, "CF": 6.0, "Ca": 0.8, "AvP": 0.4},
-                    "لحوم": {"CP": 14.0, "ME": 2400, "CF": 7.0, "Ca": 0.6, "AvP": 0.35}
+                "السلالات": ["هولشتاين", "جيرسي", "سيمنتال", "سودانية محلية"],
+                "الإنتاج": ["حلابة", "لحوم", "عجول تسمين"],
+                "الاحتياجات": {
+                    "حلابة": {"CP": 16.0, "ME": 2650, "CF": 6.0, "Ca": 0.8, "AvP": 0.4, "الوزن_الافتراضي": 600},
+                    "لحوم": {"CP": 14.0, "ME": 2400, "CF": 7.0, "Ca": 0.6, "AvP": 0.35, "الوزن_الافتراضي": 450},
+                    "عجول تسمين": {"CP": 18.0, "ME": 2800, "CF": 5.0, "Ca": 0.7, "AvP": 0.4, "الوزن_الافتراضي": 350}
                 }
             },
             "دواجن": {
-                "سلالات": {
-                    "Cobb 500": {"الغرض": ["لحوم"], "وزن_متوسط": 2.4},
-                    "Ross 308": {"الغرض": ["لحوم"], "وزن_متوسط": 2.38},
-                    "Hy-Line W-36": {"الغرض": ["بياض"], "وزن_متوسط": 1.5},
-                    "Lohmann Brown": {"الغرض": ["بياض"], "وزن_متوسط": 1.8}
-                },
-                "احتياجات": {
-                    "لحوم": {"CP": 22.0, "ME": 3200, "CF": 4.0, "Ca": 0.9, "AvP": 0.45},
-                    "بياض": {"CP": 18.0, "ME": 2800, "CF": 5.0, "Ca": 3.5, "AvP": 0.45}
+                "السلالات": ["Cobb 500", "Ross 308", "Hy-Line W-36", "Lohmann Brown"],
+                "الإنتاج": ["لحوم", "بياض", "تسمين"],
+                "الاحتياجات": {
+                    "لحوم": {"CP": 22.0, "ME": 3200, "CF": 4.0, "Ca": 0.9, "AvP": 0.45, "الوزن_الافتراضي": 2.4},
+                    "بياض": {"CP": 18.0, "ME": 2800, "CF": 5.0, "Ca": 3.5, "AvP": 0.45, "الوزن_الافتراضي": 1.5},
+                    "تسمين": {"CP": 20.0, "ME": 3000, "CF": 4.5, "Ca": 1.0, "AvP": 0.5, "الوزن_الافتراضي": 1.8}
                 }
             },
             "أغنام": {
-                "سلالات": {
-                    "العواسي": {"الغرض": ["حلابة", "لحوم"], "وزن_متوسط": 55},
-                    "الحمري": {"الغرض": ["لحوم"], "وزن_متوسط": 45}
-                },
-                "احتياجات": {
-                    "حلابة": {"CP": 15.0, "ME": 2400, "CF": 8.0, "Ca": 0.7, "AvP": 0.35},
-                    "لحوم": {"CP": 13.0, "ME": 2200, "CF": 9.0, "Ca": 0.5, "AvP": 0.30}
+                "السلالات": ["العواسي", "الحمري", "النجدي"],
+                "الإنتاج": ["حلابة", "لحوم", "تسمين"],
+                "الاحتياجات": {
+                    "حلابة": {"CP": 15.0, "ME": 2400, "CF": 8.0, "Ca": 0.7, "AvP": 0.35, "الوزن_الافتراضي": 55},
+                    "لحوم": {"CP": 13.0, "ME": 2200, "CF": 9.0, "Ca": 0.5, "AvP": 0.30, "الوزن_الافتراضي": 45},
+                    "تسمين": {"CP": 14.0, "ME": 2300, "CF": 8.0, "Ca": 0.6, "AvP": 0.35, "الوزن_الافتراضي": 40}
                 }
             },
             "ماعز": {
-                "سلالات": {
-                    "السعانين": {"الغرض": ["حلابة", "لحوم"], "وزن_متوسط": 50},
-                    "البلدي المصري": {"الغرض": ["لحوم"], "وزن_متوسط": 35}
-                },
-                "احتياجات": {
-                    "حلابة": {"CP": 14.0, "ME": 2300, "CF": 8.0, "Ca": 0.7, "AvP": 0.35},
-                    "لحوم": {"CP": 12.0, "ME": 2100, "CF": 9.0, "Ca": 0.5, "AvP": 0.30}
+                "السلالات": ["السعانين", "البلدي المصري", "الشامي"],
+                "الإنتاج": ["حلابة", "لحوم", "تسمين"],
+                "الاحتياجات": {
+                    "حلابة": {"CP": 14.0, "ME": 2300, "CF": 8.0, "Ca": 0.7, "AvP": 0.35, "الوزن_الافتراضي": 50},
+                    "لحوم": {"CP": 12.0, "ME": 2100, "CF": 9.0, "Ca": 0.5, "AvP": 0.30, "الوزن_الافتراضي": 35},
+                    "تسمين": {"CP": 13.0, "ME": 2200, "CF": 8.5, "Ca": 0.6, "AvP": 0.35, "الوزن_الافتراضي": 30}
                 }
             }
         }
@@ -388,9 +394,9 @@ class FeedDatabase:
             {"المادة الخام": "نخالة القمح", "CP": 15.0, "ME": 1300, "CF": 11.0, "EE": 4.0, "Ca": 0.14, "AvP": 0.28, "Cost": 0.95, "Max": 25.0},
             {"المادة الخام": "مولاس القصب", "CP": 4.0, "ME": 1900, "CF": 0.0, "EE": 0.1, "Ca": 0.80, "AvP": 0.08, "Cost": 0.70, "Max": 5.0},
             {"المادة الخام": "حجر جيري", "CP": 0.0, "ME": 0, "CF": 0.0, "EE": 0.0, "Ca": 38.0, "AvP": 0.00, "Cost": 0.20, "Max": 4.0},
-            {"المادة الخام": "DCP", "CP": 0.0, "ME": 0, "CF": 0.0, "EE": 0.0, "Ca": 22.0, "AvP": 18.0, "Cost": 2.20, "Max": 2.0},
+            {"المادة الخام": "ثنائي فوسفات الكالسيوم", "CP": 0.0, "ME": 0, "CF": 0.0, "EE": 0.0, "Ca": 22.0, "AvP": 18.0, "Cost": 2.20, "Max": 2.0},
             {"المادة الخام": "ملح الطعام", "CP": 0.0, "ME": 0, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost": 0.30, "Max": 0.5},
-            {"المادة الخام": "Premix", "CP": 0.0, "ME": 0, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost": 8.00, "Max": 0.5}
+            {"المادة الخام": "مخلوط فيتامينات", "CP": 0.0, "ME": 0, "CF": 0.0, "EE": 0.0, "Ca": 0.00, "AvP": 0.00, "Cost": 8.00, "Max": 0.5}
         ])
 
 # ==========================================
@@ -425,7 +431,7 @@ class AdvancedFeedOptimizer:
             
             return result
         except Exception as e:
-            st.error(f"خطأ في التحسين: {str(e)}")
+            st.error(f"⚠️ خطأ في التحسين: {str(e)}")
             return None
     
     def get_nutritional_analysis(self, solution):
@@ -468,79 +474,173 @@ st.sidebar.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 10. القسم الأول: تركيب العلائق المتقدم
+# 10. القسم الأول: تركيب العلائق المتقدم (المحسن)
 # ==========================================
 if "تركيب العلائق" in app_mode:
-    st.subheader("🌾 نظام تركيب العلائق المتقدم حسب النوع والغرض")
+    st.subheader("🌾 نظام تركيب العلائق المتقدم حسب النوع والإنتاج")
     
-    # اختيار نوع الحيوان
+    # تهيئة قاعدة البيانات
     nutrition_db = AnimalNutritionDatabase()
     animal_types = nutrition_db.get_animal_types()
     
-    col1, col2, col3 = st.columns(3)
+    # ==========================================
+    # الخطوة 1: اختيار نوع الحيوان
+    # ==========================================
+    st.markdown("### 🐄 الخطوة 1: اختيار نوع الحيوان")
+    
+    col1, col2 = st.columns(2)
     with col1:
-        animal_type = st.selectbox("نوع الحيوان:", list(animal_types.keys()))
+        animal_type = st.selectbox(
+            "نوع الحيوان:",
+            options=list(animal_types.keys()),
+            help="اختر نوع الحيوان الذي ترغب في تركيب عليقته"
+        )
     
-    # اختيار السلالة
-    breeds = animal_types[animal_type]["سلالات"]
+    # الحصول على بيانات النوع المختار
+    animal_data = animal_types[animal_type]
+    
+    # ==========================================
+    # الخطوة 2: اختيار السلالة والإنتاج
+    # ==========================================
+    st.markdown("### 🧬 الخطوة 2: اختيار السلالة والغرض من الإنتاج")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        breed = st.selectbox(
+            "السلالة:",
+            options=animal_data["السلالات"],
+            help="اختر السلالة المناسبة"
+        )
+    
     with col2:
-        breed = st.selectbox("السلالة:", list(breeds.keys()))
+        production_type = st.selectbox(
+            "الغرض من الإنتاج:",
+            options=animal_data["الإنتاج"],
+            help="اختر الغرض من تربية الحيوان"
+        )
     
-    # اختيار الغرض من الإنتاج
-    purposes = breeds[breed]["الغرض"]
-    with col3:
-        purpose = st.selectbox("الغرض من الإنتاج:", purposes)
+    # ==========================================
+    # الخطوة 3: عرض الاحتياجات وتعديلها
+    # ==========================================
+    st.markdown("### 📊 الخطوة 3: تحديد الاحتياجات الغذائية")
     
-    # عرض الاحتياجات المقترحة
-    requirements = animal_types[animal_type]["احتياجات"][purpose]
+    # جلب الاحتياجات الافتراضية
+    default_reqs = animal_data["الاحتياجات"][production_type]
     
-    st.markdown("---")
-    st.markdown("### 📊 الاحتياجات الغذائية المقترحة")
+    st.info(f"💡 الاحتياجات المقترحة لـ {animal_type} - {breed} - {production_type}")
     
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
-        req_cp = st.number_input("البروتين CP %:", 8.0, 30.0, requirements["CP"], step=0.5)
+        req_cp = st.number_input(
+            "البروتين CP %:",
+            min_value=8.0,
+            max_value=30.0,
+            value=float(default_reqs["CP"]),
+            step=0.5,
+            help="نسبة البروتين الخام المطلوبة"
+        )
     with col2:
-        req_me = st.number_input("الطاقة ME:", 1200, 3500, requirements["ME"], step=50)
+        req_me = st.number_input(
+            "الطاقة ME:",
+            min_value=1200.0,
+            max_value=3500.0,
+            value=float(default_reqs["ME"]),
+            step=50.0,
+            help="الطاقة الأيضية بالكيلو كالوري"
+        )
     with col3:
-        req_cf = st.number_input("الألياف CF %:", 2.0, 25.0, requirements["CF"], step=0.5)
+        req_cf = st.number_input(
+            "الألياف CF %:",
+            min_value=2.0,
+            max_value=25.0,
+            value=float(default_reqs["CF"]),
+            step=0.5,
+            help="نسبة الألياف الخام القصوى"
+        )
     with col4:
-        req_ca = st.number_input("الكالسيوم Ca %:", 0.0, 5.0, requirements["Ca"], step=0.1)
+        req_ca = st.number_input(
+            "الكالسيوم Ca %:",
+            min_value=0.0,
+            max_value=5.0,
+            value=float(default_reqs["Ca"]),
+            step=0.1,
+            help="نسبة الكالسيوم المطلوبة"
+        )
     with col5:
-        req_avp = st.number_input("الفوسفور Av.P %:", 0.0, 2.0, requirements["AvP"], step=0.05)
+        req_avp = st.number_input(
+            "الفوسفور Av.P %:",
+            min_value=0.0,
+            max_value=2.0,
+            value=float(default_reqs["AvP"]),
+            step=0.05,
+            help="نسبة الفوسفور المتاح"
+        )
     
-    # معلومات عن الحيوان
-    st.markdown("---")
-    st.markdown("### 🐄 معلومات الحيوان")
-    weight = st.number_input("وزن الحيوان (كجم):", 1.0, 1000.0, breeds[breed]["وزن_متوسط"], step=5.0)
-    production_level = st.number_input("مستوى الإنتاج (حليب/بيض):", 0.0, 100.0, 10.0, step=1.0)
+    # ==========================================
+    # الخطوة 4: معلومات الوزن والإنتاج
+    # ==========================================
+    st.markdown("### ⚖️ الخطوة 4: معلومات الوزن والإنتاج")
     
-    # اختيار المواد الخام
-    st.markdown("---")
-    st.markdown("### 📋 اختيار المواد الخام")
+    default_weight = float(default_reqs.get("الوزن_الافتراضي", 50))
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        weight = st.number_input(
+            "وزن الحيوان (كجم):",
+            min_value=1.0,
+            max_value=1000.0,
+            value=default_weight,
+            step=5.0,
+            help="أدخل وزن الحيوان الحالي"
+        )
+    with col2:
+        production_level = st.number_input(
+            "مستوى الإنتاج اليومي:",
+            min_value=0.0,
+            max_value=100.0,
+            value=10.0,
+            step=1.0,
+            help="مقدار الإنتاج اليومي (حليب/بيض/زيادة وزن)"
+        )
+    
+    # ==========================================
+    # الخطوة 5: اختيار المواد الخام
+    # ==========================================
+    st.markdown("### 📋 الخطوة 5: اختيار المواد الخام")
     
     feed_df = FeedDatabase.get_all_feeds()
     
-    # إضافة عمود للاختيار
+    # إضافة عمود للاختيار مع تعيين الكل كـ True
     feed_df["اختيار"] = True
+    
+    st.info("💡 اختر المواد الخام المتاحة لديك، وسيقوم النظام بحساب التركيبة المثلى بأقل تكلفة")
     
     edited_df = st.data_editor(
         feed_df,
         column_config={
-            "اختيار": st.column_config.CheckboxColumn("اختيار", default=True),
-            "CP": st.column_config.NumberColumn("بروتين %", min_value=0, max_value=100),
-            "ME": st.column_config.NumberColumn("طاقة", min_value=0, max_value=5000),
-            "CF": st.column_config.NumberColumn("ألياف %", min_value=0, max_value=100),
-            "Ca": st.column_config.NumberColumn("كالسيوم %", min_value=0, max_value=100),
-            "AvP": st.column_config.NumberColumn("فوسفور %", min_value=0, max_value=100),
-            "Cost": st.column_config.NumberColumn("تكلفة", min_value=0, max_value=100),
-            "Max": st.column_config.NumberColumn("حد أقصى %", min_value=0, max_value=100)
+            "اختيار": st.column_config.CheckboxColumn(
+                "اختيار",
+                default=True,
+                help="حدد المواد التي ترغب في استخدامها"
+            ),
+            "المادة الخام": st.column_config.TextColumn("المادة الخام", disabled=True),
+            "CP": st.column_config.NumberColumn("بروتين %", min_value=0, max_value=100, disabled=True),
+            "ME": st.column_config.NumberColumn("طاقة", min_value=0, max_value=5000, disabled=True),
+            "CF": st.column_config.NumberColumn("ألياف %", min_value=0, max_value=100, disabled=True),
+            "Ca": st.column_config.NumberColumn("كالسيوم %", min_value=0, max_value=100, disabled=True),
+            "AvP": st.column_config.NumberColumn("فوسفور %", min_value=0, max_value=100, disabled=True),
+            "Cost": st.column_config.NumberColumn("تكلفة", min_value=0, max_value=100, disabled=True),
+            "Max": st.column_config.NumberColumn("حد أقصى %", min_value=0, max_value=100, disabled=True)
         },
         use_container_width=True,
         hide_index=True
     )
     
+    # ==========================================
     # زر حساب العليقة
+    # ==========================================
+    st.markdown("---")
+    
     if st.button("🚀 حساب العليقة المثلى", type="primary", use_container_width=True):
         # تصفية المواد المختارة
         selected_df = edited_df[edited_df["اختيار"] == True].copy()
@@ -557,10 +657,12 @@ if "تركيب العلائق" in app_mode:
                 "AvP": req_avp
             }
             
+            # إنشاء محسن وحساب التركيبة
             optimizer = AdvancedFeedOptimizer(selected_df, req_dict)
             result = optimizer.optimize()
             
             if result is not None and result.success:
+                st.balloons()
                 st.success("✅ تم حساب التركيبة المثلى بنجاح!")
                 
                 # عرض النتائج
@@ -573,30 +675,31 @@ if "تركيب العلائق" in app_mode:
                 active_df = result_df[result_df["النسبة %"] > 0.01].reset_index(drop=True)
                 
                 # عرض المقاييس الأساسية
+                st.markdown("### 📈 ملخص التركيبة")
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
-                    st.metric("تكلفة الكجم", f"${result.fun:.3f}")
+                    st.metric("💵 تكلفة الكجم", f"${result.fun:.3f}")
                 with col2:
-                    st.metric("تكلفة الطن", f"${result.fun * 1000:.2f}")
+                    st.metric("💰 تكلفة الطن", f"${result.fun * 1000:.2f}")
                 with col3:
-                    st.metric("عدد المكونات", len(active_df))
+                    st.metric("📦 عدد المكونات", len(active_df))
                 with col4:
                     # حساب نسبة البروتين الفعلية
                     actual_cp = np.sum(active_df["CP"] * active_df["النسبة %"] / 100)
-                    st.metric("البروتين الفعلي", f"{actual_cp:.1f}%")
+                    st.metric("🥩 البروتين الفعلي", f"{actual_cp:.1f}%")
                 
                 # عرض جدول التركيبة
-                st.markdown("#### 📊 تركيب العليقة المحسوب")
+                st.markdown("### 📋 جدول تركيب العليقة")
                 display_cols = ["المادة الخام", "النسبة %", "كجم/طن", "التكلفة/طن", "CP", "ME", "CF", "Ca", "AvP"]
                 st.dataframe(active_df[display_cols], use_container_width=True)
                 
-                # عرض الرسوم البيانية - محسنة للعرض
-                st.markdown("#### 📈 التحليل البياني للتركيبة")
+                # عرض الرسوم البيانية
+                st.markdown("### 📊 التحليل البياني للتركيبة")
                 
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    # رسم بياني دائري - مع إعدادات محسنة
+                    # رسم بياني دائري
                     fig_pie = go.Figure(data=[go.Pie(
                         labels=active_df["المادة الخام"],
                         values=active_df["النسبة %"],
@@ -607,9 +710,10 @@ if "تركيب العلائق" in app_mode:
                     )])
                     fig_pie.update_layout(
                         title="توزيع مكونات العليقة",
-                        height=400,
-                        margin=dict(l=20, r=20, t=40, b=20),
-                        showlegend=False
+                        height=450,
+                        margin=dict(l=20, r=20, t=50, b=20),
+                        showlegend=False,
+                        font=dict(family="Cairo, sans-serif", size=12)
                     )
                     st.plotly_chart(fig_pie, use_container_width=True, config={'responsive': True})
                 
@@ -621,20 +725,23 @@ if "تركيب العلائق" in app_mode:
                             y=active_df["النسبة %"],
                             text=active_df["النسبة %"].round(1),
                             textposition='outside',
-                            marker_color='#0284C7'
+                            marker_color='#0284C7',
+                            textfont=dict(family="Cairo, sans-serif")
                         )
                     ])
                     fig_bar.update_layout(
                         title="نسب المكونات في العليقة",
                         xaxis_title="المادة الخام",
                         yaxis_title="النسبة %",
-                        height=400,
-                        margin=dict(l=20, r=20, t=40, b=60)
+                        height=450,
+                        margin=dict(l=20, r=20, t=50, b=80),
+                        font=dict(family="Cairo, sans-serif", size=12)
                     )
+                    fig_bar.update_xaxis(tickangle=45)
                     st.plotly_chart(fig_bar, use_container_width=True, config={'responsive': True})
                 
                 # تحليل القيمة الغذائية
-                st.markdown("#### 📋 التحليل الغذائي للتركيبة")
+                st.markdown("### 📋 التحليل الغذائي للتركيبة")
                 analysis = optimizer.get_nutritional_analysis(result)
                 
                 if analysis:
@@ -654,7 +761,7 @@ if "تركيب العلائق" in app_mode:
                     with col5:
                         st.metric("الفوسفور Av.P", f"{analysis['AvP']:.2f}%", 
                                  delta=f"{analysis['AvP'] - req_avp:.2f}")
-                
+                    
             else:
                 st.error("❌ المواد الخام المختارة غير كافية لتحقيق المستهدفات المطلوبة. حاول إضافة مواد أخرى أو تعديل القيود.")
 
@@ -764,7 +871,6 @@ elif "الهندسة الوراثية" in app_mode:
 elif "تهجين الدواجن" in app_mode:
     st.subheader("🐔 نظام تهجين الدواجن العالمي")
     
-    # قاعدة بيانات الدواجن المبسطة
     poultry_breeds = {
         "البياض": ["Hy-Line W-36", "Hy-Line W-80", "Lohmann Brown", "Lohmann LSL", "ISA Brown"],
         "اللاحم": ["Cobb 500", "Cobb 700", "Ross 308", "Ross 708", "Arbor Acres"],
@@ -903,7 +1009,7 @@ else:
                             st.write(f"**{key}:** {value}")
 
 # ==========================================
-# 15. أسفل الصفحة
+# 15. أسفل الصفحة المحدث
 # ==========================================
 st.markdown("---")
 st.markdown(f"""
@@ -914,12 +1020,15 @@ st.markdown(f"""
     <div style="font-size: 0.8rem; margin-top: 5px;">
         تم التطوير بواسطة: <strong>د. عبد القادر إسماعيل</strong>
     </div>
+    <div style="font-size: 0.8rem; margin-top: 5px; color: #FCD34D;">
+        🤲 صدقة جارية على روح والدي <strong>إسماعيل تاور</strong> والأخت <strong>ابتسام إسماعيل تاور</strong>
+    </div>
     <div style="font-size: 0.7rem; margin-top: 5px; color: #64748B;">
         الإصدار {APP_VERSION} | جميع الحقوق محفوظة © 2024
     </div>
     <div style="font-size: 0.7rem; margin-top: 10px; color: #60A5FA; border-top: 1px solid #1E293B; padding-top: 10px;">
         <span style="color: #FCD34D;">🤲</span> 
-        اللهم اجعل هذا العمل صدقة جارية لوالدي
+        اللهم اجعل هذا العمل صدقة جارية لهما
         <span style="color: #FCD34D;">🤲</span>
     </div>
 </div>
